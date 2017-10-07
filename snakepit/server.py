@@ -1,46 +1,37 @@
-import os
 import asyncio
 import json
 from aiohttp import web
 
-import settings
-from game import Game
-
-async def handle(request):
-    ALLOWED_FILES = ["index.html", "style.css"]
-    name = request.match_info.get('name', 'index.html')
-    if name in ALLOWED_FILES:
-        try:
-            with open(name, 'rb') as index:
-                return web.Response(body=index.read(), content_type='text/html')
-        except FileNotFoundError:
-            pass
-    return web.Response(status=404)
+from . import settings
+from .game import Game
+from .messaging import Messaging
 
 
 async def wshandler(request):
     print("Connected")
-    app = request.app
-    game = app["game"]
+    game = request.app['game']
+    player = None
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    player = None
     while True:
         msg = await ws.receive()
+
         if msg.tp == web.MsgType.text:
             print("Got message %s" % msg.data)
-
             data = json.loads(msg.data)
-            if type(data) == int and player:
+
+            if isinstance(data, int) and player:
                 # Interpret as key code
                 player.keypress(data)
-            if type(data) != list:
+            elif not isinstance(data, list):
+                print("Invalid data")
                 continue
-            if not player:
-                if data[0] == "new_player":
+            elif not player:
+                if data[0] == Messaging.MSG_NEW_PLAYER:
+                    print("Creating new player")
                     player = game.new_player(data[1], ws)
-            elif data[0] == "join":
+            elif data[0] == Messaging.MSG_JOIN:
                 if not game.running:
                     game.reset_world()
 
@@ -48,6 +39,8 @@ async def wshandler(request):
                     asyncio.ensure_future(game_loop(game))
 
                 game.join(player)
+            else:
+                print("Doing nothing")
 
         elif msg.tp == web.MsgType.close:
             break
@@ -56,30 +49,35 @@ async def wshandler(request):
         game.player_disconnected(player)
 
     print("Closed connection")
+
     return ws
+
 
 async def game_loop(game):
     game.running = True
-    while 1:
+
+    while True:
         game.next_frame()
-        if not game.count_alive_players():
+
+        if not game.players_alive_count:
             print("Stopping game loop")
             break
+
         await asyncio.sleep(1./settings.GAME_SPEED)
+
     game.running = False
 
 
-event_loop = asyncio.get_event_loop()
-event_loop.set_debug(True)
+def run(host=None, port=8000, debug=settings.DEBUG):
+    event_loop = asyncio.get_event_loop()
+    event_loop.set_debug(True)
 
-app = web.Application()
+    app = web.Application(debug=debug)
+    app['game'] = Game()
 
-app["game"] = Game()
+    app.router.add_route('GET', '/connect', wshandler)
 
-app.router.add_route('GET', '/connect', wshandler)
-app.router.add_route('GET', '/{name}', handle)
-app.router.add_route('GET', '/', handle)
+    if debug:
+        app.router.add_static('/', settings.WEB_ROOT)
 
-# get port for heroku
-port = int(os.environ.get('PORT', 5000))
-web.run_app(app, port=port)
+    web.run_app(app, host=host, port=port)

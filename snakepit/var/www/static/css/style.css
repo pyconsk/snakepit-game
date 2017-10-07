@@ -3,8 +3,29 @@
     background-color: black;
     color: silver;
     font-size: 11pt;
-    text-align:center;
-    line-height: 1.2em;
+    text-align: center;
+    line-height: 1em;
+}
+
+
+footer {
+    margin-top: 2em;
+}
+
+footer p {
+    font-size: 10px;
+}
+
+h1 {
+    font-size: 2.5em;
+}
+
+h2 {
+    font-size: 1.5em;
+}
+
+h3 {
+    font-size: 1.2em;
 }
 
 a {
@@ -15,19 +36,11 @@ a:hover {
     text-decoration: underline;
 }
 
-/*body {
-    -ms-transform: scale(1.2,1); /* IE 9
-    -webkit-transform: scale(1.2,1); /* Safari
-    transform: scale(1.2,1); /* Standard syntax
-}*/
-
 input {
-    border: 1px solid;
+    border: 1px solid silver;
     padding: 0.5em;
-    border-color: silver;
     background: black;
     color: lime;
-    font-size: 1em;
     text-align: left;
 }
 
@@ -35,29 +48,63 @@ button {
     border: 0;
     text-align: center;
     background: silver;
-    color: green;
+    color: black;
     font-size: 1em;
     padding: 0.5em;
+    cursor: pointer;
 }
 
+ol {
+    text-align: center;
+    display: inline-block;
+}
+
+ol li {
+    margin-bottom: 1.1em;
+    text-align: left;
+}
+
+/*noinspection CssUnusedSymbol*/
 .color0 { color:white }
+
+/*noinspection CssUnusedSymbol*/
 .color1 { color:red }
 .color2 { color:yellow }
 .color3 { color:lime }
 .color4 { color:aqua }
+
+/*noinspection CssUnusedSymbol*/
 .color5 { color:#4444FF }
 .color6 { color:fuchsia }
 
 
-#userButtons {
-    margin-top: 1em;
+.align-left {
+    text-align: left;
 }
 
-#btnJoin {
-    color: maroon;
+.white {
+    color: white;
 }
-#btnDisconnect {
-    color: black;
+
+.red {
+    color: red;
+    margin-top: 5em;
+}
+
+#status {
+    outline: 1px solid cyan;
+    position: fixed;
+    bottom: 1px;
+    left: 1px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-size: 0.9em;
+}
+
+#userButtons {
+    margin-top: 1em;
 }
 
 #playScreen {
@@ -65,8 +112,8 @@ button {
 }
 
 #connectForm{
-    margin-top: 2em;
-    margin-bottom: 5em;
+    margin-top: 0;
+    margin-bottom: 3em;
 }
 
 #activePlayers, #topScores {
@@ -76,10 +123,13 @@ button {
     vertical-align: top;
 }
 
+/*noinspection CssUnusedSymbol,CssUnusedSymbol*/
 #activePlayers .name, #topScores .name {
     width: 10em;
     text-align: left;
 }
+
+/*noinspection CssUnusedSymbol,CssUnusedSymbol*/
 #activePlayers .score, #topScores .score {
     width: 3em;
     text-align: right;
@@ -99,8 +149,7 @@ button {
 
 #worldHolder {
     display: inline-block;
-    border: 1px solid;
-    border-color: silver;
+    border: 1px solid silver;
     padding: 0.3em;
     line-height: 1em;
 }
@@ -113,6 +162,7 @@ button {
     table-layout: fixed
 }
 
+/*noinspection CssUnusedSymbol*/
 #world .td {
     width: 1em;
     height: 1em;

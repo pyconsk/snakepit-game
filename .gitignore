@@ -19,7 +19,6 @@ lib/
 lib64/
 parts/
 sdist/
-var/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -60,3 +59,10 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# PyCharm
+.idea
+
+# Snakepit
+top_scores.txt
+local_settings.py
