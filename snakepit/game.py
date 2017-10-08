@@ -1,5 +1,6 @@
-from random import randint, choice
 import json
+from logging import getLogger
+from random import randint, choice
 
 from . import settings
 from .world import World
@@ -7,6 +8,8 @@ from .player import Player
 from .messaging import Messaging
 from .constants import COLOR_BLACK, CH_VOID, CH_STONE
 from .datatypes import Char, Draw
+
+logger = getLogger(__name__)
 
 
 class Game(Messaging):
@@ -199,6 +202,7 @@ class Game(Messaging):
         return render
 
     def player_disconnected(self, player):
+        logger.info('Removing player %s', player)
         player.ws = None
 
         if player.alive:
@@ -208,9 +212,11 @@ class Game(Messaging):
         del self._players[player.id]
         del player
 
-    def disconnect_all(self):
+    def disconnect_closed(self):
         for player in list(self._players.values()):
-            self.player_disconnected(player)
+            if player.ws.closed or player.ws.close_code:
+                logger.warning('Disconnection dead player %s', player)
+                self.player_disconnected(player)
 
     def next_frame(self):
         messages = []

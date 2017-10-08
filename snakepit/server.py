@@ -66,8 +66,9 @@ async def game_loop(game):
                 break
 
             await asyncio.sleep(1./settings.GAME_SPEED)
+
+            game.disconnect_closed()
     finally:
-        game.disconnect_all()
         game.running = False
 
 
