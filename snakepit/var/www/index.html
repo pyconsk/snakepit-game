@@ -27,6 +27,10 @@
         $(document).bind('keydown', keyHandler);
     }
 
+    function closeHandler(){
+        $('#status').text("disconnected from server");
+    }
+
     function messageHandler(e){
         // $("#status").text(e.data);
         var json = JSON.parse(e.data);
@@ -167,6 +171,7 @@
             ws = new WebSocket('ws://' + location.host + '/connect');
             ws.onopen = openHandler;
             ws.onmessage = messageHandler;
+            ws.onclose = closeHandler;
             ws.onerror = function(e) {
                 $('#status').text(e.toString());
             };

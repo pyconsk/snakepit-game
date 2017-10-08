@@ -77,11 +77,6 @@ ol li {
 .color5 { color:#4444FF }
 .color6 { color:fuchsia }
 
-
-.align-left {
-    text-align: left;
-}
-
 .white {
     color: white;
 }
@@ -96,10 +91,7 @@ ol li {
     position: fixed;
     bottom: 1px;
     left: 1px;
-    padding-left: 6px;
-    padding-right: 6px;
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding: 2px 6px;
     font-size: 0.9em;
 }
 

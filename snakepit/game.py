@@ -2,25 +2,24 @@ from random import randint, choice
 import json
 
 from . import settings
+from .world import World
 from .player import Player
 from .messaging import Messaging
+from .constants import COLOR_BLACK, CH_VOID, CH_STONE
 from .datatypes import Char, Draw
 
 
 class Game(Messaging):
-    COLOR_BLACK = 0
-    CH_STONE = '#'
-    CH_VOID = ' '
-    VOID_CHAR = Char(CH_VOID, COLOR_BLACK)
-    TOP_SCORES_FILE = settings.TOP_SCORES_FILE
-
     def __init__(self):
         self._last_id = 0
         self._colors = []
         self._players = {}
         self._top_scores = self._read_top_scores()
-        self._world = self._create_world()
+        self._world = World()
         self.running = False
+
+    def __repr__(self):
+        return '<%s [players=%s]>' % (self.__class__.__name__, len(self._players))
 
     def _send_msg(self, player, *args):
         self._send_one(player.ws, [args])
@@ -32,9 +31,10 @@ class Game(Messaging):
     def _send_msg_all(self, *args):
         self._send_msg_all_multi([args])
 
-    def _read_top_scores(self):
+    @staticmethod
+    def _read_top_scores():
         try:
-            with open(self.TOP_SCORES_FILE, 'r+') as fp:
+            with open(settings.TOP_SCORES_FILE, 'r+') as fp:
                 content = fp.read()
 
                 if content:
@@ -47,7 +47,7 @@ class Game(Messaging):
         return top_scores
 
     def _store_top_scores(self):
-        with open(self.TOP_SCORES_FILE, 'w') as fp:
+        with open(settings.TOP_SCORES_FILE, 'w') as fp:
             fp.write(json.dumps(self._top_scores))
             fp.close()
 
@@ -104,20 +104,8 @@ class Game(Messaging):
 
         self._send_msg_all_multi(messages)
 
-    def _create_world(self):
-        world = []
-
-        for y in range(0, settings.FIELD_SIZE_Y):
-            world.append([self.VOID_CHAR] * settings.FIELD_SIZE_X)
-
-        return world
-
     def reset_world(self):
-        for y in range(0, settings.FIELD_SIZE_Y):
-            for x in range(0, settings.FIELD_SIZE_X):
-                if self._world[y][x].char != self.CH_VOID:
-                    self._world[y][x] = self.VOID_CHAR
-
+        self._world.reset()
         self._send_msg_all(self.MSG_RESET_WORLD)
 
     def _get_spawn_place(self):
@@ -127,7 +115,7 @@ class Game(Messaging):
             x = randint(0, settings.FIELD_SIZE_X - 1)
             y = randint(0, settings.FIELD_SIZE_Y - 1)
 
-            if self._world[y][x].char == self.CH_VOID:
+            if self._world[y][x].char == CH_VOID:
                 break
 
         return x, y
@@ -152,7 +140,7 @@ class Game(Messaging):
             x, y = self._get_spawn_place()
 
             if x and y:
-                render += [Draw(x, y, self.CH_STONE, self.COLOR_BLACK)]
+                render += [Draw(x, y, CH_STONE, COLOR_BLACK)]
 
         return render
 
@@ -202,7 +190,7 @@ class Game(Messaging):
         self._calc_top_scores(player)
         self._send_msg_all(self.MSG_TOP_SCORES, self.top_scores)
 
-        render = player.render_game_over()
+        render = player.snake.render_game_over()
 
         if not self.players_alive_count:
             render += self._render_text(" >>> GAME OVER <<< ", self._pick_random_color())
@@ -220,6 +208,10 @@ class Game(Messaging):
         del self._players[player.id]
         del player
 
+    def disconnect_all(self):
+        for player in list(self._players.values()):
+            self.player_disconnected(player)
+
     def next_frame(self):
         messages = []
         render_all = []
@@ -229,9 +221,9 @@ class Game(Messaging):
                 continue
 
             # check if snake already exists
-            if len(p.snake):
+            if p.snake and len(p.snake.body):
                 # check next position's content
-                pos = p.next_position()
+                pos = p.snake.next_position()
                 # check bounds
                 if pos.x < 0 or pos.x >= settings.FIELD_SIZE_X or\
                    pos.y < 0 or pos.y >= settings.FIELD_SIZE_Y:
@@ -247,18 +239,18 @@ class Game(Messaging):
                     p.score += grow
                     messages.append([self.MSG_P_SCORE, p_id, p.score])
 
-                elif char != self.CH_VOID:
+                elif char != CH_VOID:
                     render_all += self.game_over(p)
                     continue
 
-                render_all += p.render_move()
-                p.grow += grow
+                render_all += p.snake.render_move()
+                p.snake.grow += grow
 
                 # spawn digits proportionally to the number of snakes
                 render_all += self.spawn_digit()
             else:
                 # newborn snake
-                render_all += p.render_new_snake()
+                render_all += p.snake.render_new()
                 # and it's birthday present
                 render_all += self.spawn_digit(right_now=True)
 

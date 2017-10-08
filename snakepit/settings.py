@@ -1,10 +1,15 @@
 import os
+import logging
 
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 WEB_ROOT = os.path.join(PROJECT_DIR, 'var', 'www')
-TOP_SCORES_FILE = os.path.join(PROJECT_DIR, 'var', 'top_scores.txt')
+TOP_SCORES_FILE = os.path.join(PROJECT_DIR, 'var', 'run', 'top_scores.txt')
 
-DEBUG = False
+DEBUG = True
+
+# Logging
+LOG_FORMAT = '%(asctime)s %(levelname)-8s %(name)s: %(message)s'
+LOG_LEVEL = logging.DEBUG
 
 # Snake-pit settings
 GAME_SPEED = 2.3  # fps, the more the faster
@@ -30,3 +35,5 @@ try:
     from .local_settings import *
 except ImportError:
     pass
+
+logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
