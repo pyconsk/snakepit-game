@@ -21,10 +21,12 @@ NUM_COLORS = 6  # set according to the number of css classes
 FIELD_SIZE_X = 50  # game field size in characters
 FIELD_SIZE_Y = 25
 
-INIT_LENGTH = 3
+INIT_LENGTH = 5
 
 DIGIT_MIN = 1
 DIGIT_MAX = 9
+
+KILL_POINTS = 1000  # player points for a successful kill
 
 STONES_ENABLED = True
 

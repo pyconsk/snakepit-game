@@ -4,15 +4,19 @@ from random import randint, choice
 
 from . import settings
 from .world import World
+from .snake import Snake
 from .player import Player
 from .messaging import Messaging
-from .constants import COLOR_BLACK, CH_VOID, CH_STONE
 from .datatypes import Char, Draw
 
 logger = getLogger(__name__)
 
 
 class Game(Messaging):
+    COLOR_0 = World.COLOR_0
+    CH_VOID = World.CH_VOID
+    CH_STONE = World.CH_STONE
+
     def __init__(self):
         self._last_id = 0
         self._colors = []
@@ -118,7 +122,7 @@ class Game(Messaging):
             x = randint(0, settings.FIELD_SIZE_X - 1)
             y = randint(0, settings.FIELD_SIZE_Y - 1)
 
-            if self._world[y][x].char == CH_VOID:
+            if self._world[y][x].char == self.CH_VOID:
                 break
 
         return x, y
@@ -143,7 +147,7 @@ class Game(Messaging):
             x, y = self._get_spawn_place()
 
             if x and y:
-                render += [Draw(x, y, CH_STONE, COLOR_BLACK)]
+                render += [Draw(x, y, self.CH_STONE, self.COLOR_0)]
 
         return render
 
@@ -154,6 +158,13 @@ class Game(Messaging):
     @property
     def players_alive_count(self):
         return sum(int(p.alive) for p in self._players.values())
+
+    def get_player_by_color(self, color):
+        for player in self._players.values():
+            if player.color == color:
+                return player
+
+        return None
 
     def new_player(self, name, ws):
         self._last_id += 1
@@ -186,9 +197,20 @@ class Game(Messaging):
         # notify all about new player
         self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
 
-    def game_over(self, player):
+    def game_over(self, player, ch_hit=None):
         player.alive = False
-        self._send_msg_all(self.MSG_P_GAMEOVER, player.id)
+        messages = [[self.MSG_P_GAMEOVER, player.id]]
+
+        if ch_hit and ch_hit.char in Snake.BODY_CHARS:
+            # someone has killed this player
+            killer = self.get_player_by_color(ch_hit.color)
+
+            if killer:
+                logger.info('Player %s was killed by %s', player, killer)
+                killer.score += settings.KILL_POINTS
+                messages.append([self.MSG_P_SCORE, killer.id, killer.score])
+
+        self._send_msg_all_multi(messages)
         self._return_player_color(player.color)
         self._calc_top_scores(player)
         self._send_msg_all(self.MSG_TOP_SCORES, self.top_scores)
@@ -236,7 +258,8 @@ class Game(Messaging):
                     render_all += self.game_over(p)
                     continue
 
-                char = self._world[pos.y][pos.x].char
+                ch = self._world[pos.y][pos.x]
+                char = ch.char
                 grow = 0
 
                 if char.isdigit():
@@ -245,8 +268,8 @@ class Game(Messaging):
                     p.score += grow
                     messages.append([self.MSG_P_SCORE, p_id, p.score])
 
-                elif char != CH_VOID:
-                    render_all += self.game_over(p)
+                elif char != self.CH_VOID:
+                    render_all += self.game_over(p, ch_hit=ch)
                     continue
 
                 render_all += p.snake.render_move()

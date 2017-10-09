@@ -23,3 +23,8 @@ class NoopRobotSnake(RobotSnake):
 class RandomRobotSnake(RobotSnake):
     def next_direction(self, initial=False):
         return random.choice(self.DIRECTIONS + (None,))
+
+
+class OldRobotSnake(RobotSnake):
+    def next_direction(self, initial=False):
+        pass

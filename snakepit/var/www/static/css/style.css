@@ -1,12 +1,11 @@
 * {
     font-family: DejaVu Sans Mono,Bitstream Vera Sans Mono,monospace !important;
-    background-color: black;
-    color: silver;
+    background-color: #111111;
+    color: #DDDDDD;
     font-size: 11pt;
     text-align: center;
     line-height: 1em;
 }
-
 
 footer {
     margin-top: 2em;
@@ -29,7 +28,7 @@ h3 {
 }
 
 a {
-    color: orange;
+    color: #FF851B;
     text-decoration: none;
 }
 a:hover {
@@ -37,18 +36,18 @@ a:hover {
 }
 
 input {
-    border: 1px solid silver;
+    border: 1px solid #DDDDDD;
     padding: 0.5em;
-    background: black;
-    color: lime;
+    background: #111111;
+    color: #01FF70;
     text-align: left;
 }
 
 button {
     border: 0;
     text-align: center;
-    background: silver;
-    color: black;
+    background: #DDDDDD;
+    color: #000000;
     font-size: 1em;
     padding: 0.5em;
     cursor: pointer;
@@ -64,30 +63,103 @@ ol li {
     text-align: left;
 }
 
+/* OLD colors */
 /*noinspection CssUnusedSymbol*/
-.color0 { color:white }
+/*.color0 { color:white }*/
+/*noinspection CssUnusedSymbol*/
+/*.color1 { color:red }*/
+/*noinspection CssUnusedSymbol*/
+/*.color2 { color:yellow }*/
+/*noinspection CssUnusedSymbol*/
+/*.color3 { color:#01FF70 }*/
+/*noinspection CssUnusedSymbol*/
+/*.color4 { color:aqua }*/
+/*noinspection CssUnusedSymbol*/
+/*.color5 { color:#4444FF }*/
+/*noinspection CssUnusedSymbol*/
+/*.color6 { color:fuchsia }*/
 
 /*noinspection CssUnusedSymbol*/
-.color1 { color:red }
-.color2 { color:yellow }
-.color3 { color:lime }
-.color4 { color:aqua }
+.color0 { color: #FFFFFF; }
 
 /*noinspection CssUnusedSymbol*/
-.color5 { color:#4444FF }
-.color6 { color:fuchsia }
+.color1 { color: #0074D9; }
+.color2 { color: #FFDC00; }
+.color3 { color: #01FF70; }
+.color4 { color: #FF4136; }
+.color5 { color: #7FDBFF; }
+
+/*noinspection CssUnusedSymbol*/
+.color6 { color: #F012BE; }
+
+/*noinspection CssUnusedSymbol*/
+.color7 { color: #3D9970; }
+
+/*noinspection CssUnusedSymbol*/
+.color8 { color: #FF851B; }
+
+/* NEW colors */
+/*noinspection CssUnusedSymbol*/
+.navy { color: #001F3F; }
+
+/*noinspection CssUnusedSymbol*/
+.blue { color: #0074D9; }
+
+/*noinspection CssUnusedSymbol*/
+.aqua { color: #7FDBFF; }
+
+/*noinspection CssUnusedSymbol*/
+.teal { color: #39CCCC; }
+
+/*noinspection CssUnusedSymbol*/
+.olive { color: #3D9970; }
+
+/*noinspection CssUnusedSymbol*/
+.green { color: #2ECC40; }
+
+/*noinspection CssUnusedSymbol*/
+.lime { color: #01FF70; }
+
+/*noinspection CssUnusedSymbol*/
+.yellow { color: #FFDC00; }
+
+/*noinspection CssUnusedSymbol*/
+.orange { color: #FF851B; }
+.red { color: #FF4136; }
+
+/*noinspection CssUnusedSymbol*/
+.fuchsia { color: #F012BE; }
+
+/*noinspection CssUnusedSymbol*/
+.purple { color: #B10DC9; }
+
+/*noinspection CssUnusedSymbol*/
+.maroon { color: #85144B; }
+.white { color: #FFFFFF; }
+
+/*noinspection CssUnusedSymbol*/
+.silver { color: #DDDDDD; }
+
+/*noinspection CssUnusedSymbol*/
+.gray { color: #AAAAAA; }
+
+/*noinspection CssUnusedSymbol*/
+.black { color: #111111; }
 
 .white {
-    color: white;
+    color: #FFFFFF;
 }
 
 .red {
-    color: red;
+    color: #FF4136;
+}
+
+#rules {
     margin-top: 5em;
 }
 
 #status {
-    outline: 1px solid cyan;
+    outline: 1px solid #7FDBFF;
     position: fixed;
     bottom: 1px;
     left: 1px;
@@ -110,7 +182,7 @@ ol li {
 
 #activePlayers, #topScores {
     width: 13em;
-    color: white;
+    color: #FFFFFF;
     display: inline-block;
     vertical-align: top;
 }

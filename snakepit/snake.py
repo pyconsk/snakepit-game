@@ -3,18 +3,23 @@ from random import randint
 
 from . import settings
 from .datatypes import Vector, Position, Draw
-from .constants import CH_VOID
+from .world import World
 
 
 class BaseSnake:
-    CH_VOID = CH_VOID
-    CH_HEAD = '%'
-    CH_BODY = '@'
-    CH_TAIL = '*'
+    COLOR_0 = World.COLOR_0
+    CH_VOID = World.CH_VOID
+    CH_STONE = World.CH_STONE
+
+    CH_HEAD = '@'
+    CH_BODY = '*'
+    CH_TAIL = '$'
+    BODY_CHARS = frozenset([CH_HEAD, CH_BODY, CH_TAIL])
 
     CH_DEAD_HEAD = 'x'
-    CH_DEAD_BODY = '@'
+    CH_DEAD_BODY = '*'
     CH_DEAD_TAIL = '+'
+    DEAD_BODY_CHARS = frozenset([CH_DEAD_HEAD, CH_DEAD_BODY, CH_DEAD_TAIL])
 
     UP = Vector(0, -1)
     DOWN = Vector(0, 1)
@@ -89,7 +94,7 @@ class Snake(BaseSnake):
         else:
             # otherwise the tail moves
             old_tail = self.body.pop()
-            render.append(Draw(old_tail.x, old_tail.y, self.CH_VOID, 0))
+            render.append(Draw(old_tail.x, old_tail.y, self.CH_VOID, self.COLOR_0))
             new_tail = self.body[-1]
             render.append(Draw(new_tail.x, new_tail.y, self.CH_TAIL, self.color))
 
@@ -101,10 +106,10 @@ class Snake(BaseSnake):
         # dead snake
         for i, pos in enumerate(self.body):
             if i == 0:
-                render.append(Draw(pos.x, pos.y, self.CH_DEAD_HEAD, 0))
+                render.append(Draw(pos.x, pos.y, self.CH_DEAD_HEAD, self.COLOR_0))
             elif i == len(self.body) - 1:
-                render.append(Draw(pos.x, pos.y, self.CH_DEAD_TAIL, 0))
+                render.append(Draw(pos.x, pos.y, self.CH_DEAD_TAIL, self.COLOR_0))
             else:
-                render.append(Draw(pos.x, pos.y, self.CH_DEAD_BODY, 0))
+                render.append(Draw(pos.x, pos.y, self.CH_DEAD_BODY, self.COLOR_0))
 
         return render

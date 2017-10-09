@@ -1,0 +1,12 @@
+game
+  - top scores in redis
+  - design
+  - auto-connect user
+  - advanced robot example
+
+mgmt
+  - DB model
+  - views: sign up, login/logout, tos, code upload/input/validator, code run, examples
+  - Terms of service
+  - admin tournament mode
+  - user chat
