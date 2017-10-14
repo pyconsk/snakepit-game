@@ -14,7 +14,7 @@ LOG_LEVEL = logging.DEBUG
 # Snake-pit settings
 GAME_SPEED = 2.3  # fps, the more the faster
 
-MAX_PLAYERS = 10
+MAX_PLAYERS = 6
 MAX_TOP_SCORES = 15
 NUM_COLORS = 6  # set according to the number of css classes
 
@@ -22,6 +22,8 @@ FIELD_SIZE_X = 50  # game field size in characters
 FIELD_SIZE_Y = 25
 
 INIT_LENGTH = 5
+INIT_MIN_DISTANCE_BORDER = 2
+INIT_RETRIES = 10  # number of snake rendering retries (sometimes the snake just cannot be rendered)
 
 DIGIT_MIN = 1
 DIGIT_MAX = 9

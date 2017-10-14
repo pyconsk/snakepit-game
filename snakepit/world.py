@@ -12,18 +12,22 @@ class World(list):
 
     def __init__(self):
         super(World, self).__init__()
-        for y in range(0, settings.FIELD_SIZE_Y):
+        for y in range(0, self.SIZE_Y):
             self.append([self.VOID_CHAR] * self.SIZE_X)
 
     def __repr__(self):
         return '<%s [%sx%s]>' % (self.__class__.__name__, self.SIZE_X, self.SIZE_Y)
 
+    def __str__(self):
+        return self.show()
+
     def show(self):
-        return '\n'.join(''.join(j[0] for j in i) for i in self)
+        border = '+' + '-' * len(self[0]) + '+'
+        return border + '\n' + '\n'.join('|' + (''.join(j[0] for j in i)) + '|' for i in self) + '\n' + border
 
     def reset(self):
-        for y in range(0, settings.FIELD_SIZE_Y):
-            for x in range(0, settings.FIELD_SIZE_X):
+        for y in range(0, self.SIZE_Y):
+            for x in range(0, self.SIZE_X):
                 if self[y][x][0] != self.CH_VOID:
                     self[y][x] = self.VOID_CHAR
 

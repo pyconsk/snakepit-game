@@ -5,13 +5,15 @@ from aiohttp import web
 
 from . import settings
 from .game import Game
+from .utils import normalize_player_name, get_client_address, validate_settings
 from .messaging import Messaging
 
 logger = getLogger(__name__)
 
 
 async def ws_handler(request):
-    logger.info('Connected to "%s" from %s', request.url, request.host)
+    client_address = get_client_address(request)
+    logger.info('Connected to "%s" from %s', request.url, client_address)
     game = request.app['game']
     player = None
     ws = web.WebSocketResponse()
@@ -20,23 +22,23 @@ async def ws_handler(request):
     # noinspection PyTypeChecker
     async for msg in ws:
         if msg.tp == web.MsgType.TEXT:
-            logger.debug('Got message: %s', msg.data)
+            logger.debug('Got message from %s: %s', client_address, msg.data)
             data = json.loads(msg.data)
 
             if isinstance(data, int) and player:
                 # Interpret as key code
                 player.keypress(data)
             elif not isinstance(data, list):
-                logger.error('Invalid data: %s', data)
+                logger.error('Invalid data from %s: %s', client_address, data)
                 continue
             elif not player:
                 if data[0] == Messaging.MSG_NEW_PLAYER:
-                    player = game.new_player(data[1], ws)
-                    logger.info('Creating new player %s', player)
+                    player = game.new_player(normalize_player_name(data[1]), ws)
+                    logger.info('Creating new %r', player)
             elif data[0] == Messaging.MSG_JOIN:
                 if not game.running:
                     game.reset_world()
-                    logger.debug('Starting game loop for player %s', player)
+                    logger.info('Starting game loop by %r', player)
                     asyncio.ensure_future(game_loop(game))
 
                 game.join(player)
@@ -44,12 +46,12 @@ async def ws_handler(request):
         elif msg.tp == web.MsgType.CLOSE:
             break
         else:
-            logger.warning('Unknown message type: %s', msg.type)
+            logger.warning('Unknown message type from %s: %s', client_address, msg.type)
 
     if player:
         game.player_disconnected(player)
 
-    logger.info('Closed connection from player %s', player)
+    logger.info('Closed connection from %s: %r', client_address, player)
 
     return ws
 
@@ -73,6 +75,7 @@ async def game_loop(game):
 
 
 def run(host=None, port=8000, debug=settings.DEBUG):
+    validate_settings(settings)
     app = web.Application(debug=debug)
     app['game'] = Game()
 

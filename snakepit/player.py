@@ -1,4 +1,8 @@
+from logging import getLogger
+
 from .snake import Snake
+
+logger = getLogger(__name__)
 
 
 class Player:
@@ -19,8 +23,8 @@ class Player:
     def __repr__(self):
         return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, self.id, self.name, self.color)
 
-    def new_snake(self, color):
-        self.snake = Snake(color)
+    def new_snake(self, world, color):
+        self.snake = Snake(world, color)
 
     def keypress(self, code):
         if not self.alive:
@@ -29,12 +33,13 @@ class Player:
         direction = self.keymap.get(code)
         snake_direction = self.snake.direction
 
-        if direction:
+        if direction and snake_direction:
             # do not move in the opposite direction
-            if not (snake_direction and
+            if snake_direction == self.snake.current_direction and not (
                     direction.xdir == -snake_direction.xdir and
                     direction.ydir == -snake_direction.ydir):
                 self.snake.direction = direction
+                logger.info('%r changed direction to %r', self, direction)
 
     @property
     def alive(self):

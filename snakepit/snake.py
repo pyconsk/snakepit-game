@@ -3,6 +3,7 @@ from random import randint
 
 from . import settings
 from .datatypes import Vector, Position, Draw
+from .exceptions import SnakeError, SnakePlacementError
 from .world import World
 
 
@@ -30,9 +31,9 @@ class BaseSnake:
 
     color = None
     alive = False
-    direction = None
 
-    def __init__(self, color):
+    def __init__(self, world, color):
+        self._world = world
         self.color = color
         self.alive = True
 
@@ -43,23 +44,37 @@ class BaseSnake:
 class Snake(BaseSnake):
     grow = 0
     body = ()
+    direction = None
+    current_direction = None
 
     def __init__(self, *args, **kwargs):
         super(Snake, self).__init__(*args, **kwargs)
         self.body = deque()
 
-    def render_new(self):
+    def reset(self):
+        self.grow = 0
+        self.body.clear()
+        self.direction = self.current_direction = None
+
+    def create(self):
+        assert not self.grow
+        assert not self.body
+        assert not self.direction
+
         # try to spawn snake at some distance from world's borders
-        distance = settings.INIT_LENGTH + 2
-        x = randint(distance, settings.FIELD_SIZE_X - distance)
-        y = randint(distance, settings.FIELD_SIZE_Y - distance)
-        self.direction = self.DIRECTIONS[randint(0, 3)]
+        distance = settings.INIT_LENGTH + settings.INIT_MIN_DISTANCE_BORDER
+        x = randint(distance, World.SIZE_X - distance)
+        y = randint(distance, World.SIZE_Y - distance)
+        self.direction = self.current_direction = self.DIRECTIONS[randint(0, 3)]
         # create snake from tail to head
         render = []
         pos = Position(x, y)
 
         for i in range(0, settings.INIT_LENGTH):
-            self.body.appendleft(pos)
+            target = self._world[pos.y][pos.x]
+            if target.char != self.CH_VOID:
+                raise SnakePlacementError('Cannot place snake on %r because the position '
+                                          'is occupied by %r', pos, target)
 
             if i == 0:
                 char = self.CH_TAIL
@@ -68,8 +83,25 @@ class Snake(BaseSnake):
             else:
                 char = self.CH_BODY
 
+            self.body.appendleft(pos)
             render.append(Draw(pos.x, pos.y, char, self.color))
             pos = self.next_position()
+
+        return render
+
+    def render_new(self):
+        render = None
+
+        for i in range(0, settings.INIT_RETRIES):
+            try:
+                render = self.create()
+            except SnakePlacementError:
+                self.reset()
+            else:
+                break
+
+        if not render:
+            raise SnakeError('There is no place for a new snake in this world :(')
 
         return render
 
@@ -87,6 +119,8 @@ class Snake(BaseSnake):
         render.append(Draw(new_head.x, new_head.y, self.CH_HEAD, self.color))
         # draw body in the old place of head
         render.append(Draw(self.body[1].x, self.body[1].y, self.CH_BODY, self.color))
+        # save current direction of the head
+        self.current_direction = self.direction
 
         # if we grow this turn, the tail remains in place
         if self.grow > 0:

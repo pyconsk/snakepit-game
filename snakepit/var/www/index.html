@@ -23,8 +23,9 @@
 
         $('#mainScreen').hide();
         $('#playScreen').show();
+        $('#btnJoin').show();
 
-        $(document).bind('keydown', keyHandler);
+        $(document).bind('keydown', keyPress);
     }
 
     function closeHandler(){
@@ -51,6 +52,9 @@
                 case('world'):
                     initWorld(args[1]);
                     break;
+                case('error'):
+                    alert(args[1]);
+                    break;
                 case('reset_world'):
                     resetWorld();
                     break;
@@ -72,14 +76,14 @@
                     var score = args[4];
                     addPlayer(id, color, name, score);
                     if (id === playerId) {
-                        $('#btnJoin').css('visibility', 'hidden');
+                        $('#btnJoin').hide();
                     }
                     break;
                 case('p_gameover'):
                     id = args[1];
                     $('#player' + id).remove();
                     if (id === playerId) {
-                        $('#btnJoin').css('visibility', 'visible');
+                        $('#btnJoin').show();
                     }
                     break;
                 case('p_score'):
@@ -146,49 +150,103 @@
                         + '<div class="score ' + color_class + '">' + score + '</div></div>');
     }
 
-    function keyHandler(event) {
-        var code = event.keyCode;
-
-        if (!code && event.charCode) {
-            code = event.charCode;
-        }
-
+    function keyHandler(event, code) {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(code);
             event.preventDefault();
-        }
-        else {
+        } else {
             $('#status').text("Connection is closed");
         }
     }
 
+    function keyPress(event) {
+        var code = event.code || event.keyCode || event.charCode;
+
+        switch(code) {
+            case('ArrowUp'):
+            case('KeyW'):
+            case(87):  // w
+                code = 38; break;
+            case('ArrowLeft'):
+            case('KeyA'):
+            case(65):  // a
+                code = 37; break;
+            case('ArrowRight'):
+            case('KeyD'):
+            case(68):  // d
+                code = 39; break;
+            case('ArrowDown'):
+            case('KeyS'):
+            case(83):  // s
+                code = 40; break;
+            case(37):
+            case(38):
+            case(39):
+            case(40):
+                break;
+            case('Enter'):
+            case(13):  // Enter
+                // noinspection JSJQueryEfficiency
+                if ($('#btnJoin').is(':visible')) {
+                    $('#btnJoin').click();
+                }
+                return;
+            default:
+                return;
+        }
+
+        keyHandler(event, code);
+    }
+
+    function connect(event) {
+        event.preventDefault();
+
+        var _playerName = $('#playerName').val().trim();
+
+        if (!_playerName.length) {
+            return;
+        }
+
+        $('#status').text("connecting...");
+
+        ws = new WebSocket('ws://' + location.host + '/connect');
+        ws.onopen = openHandler;
+        ws.onmessage = messageHandler;
+        ws.onclose = closeHandler;
+        ws.onerror = function(e) {
+            $('#status').text(e.toString());
+        };
+    }
+
+    function disconnect(event) {
+        event.preventDefault();
+
+        if (ws) {
+            ws.close();
+        }
+
+        $('#playScreen').hide();
+        $('#mainScreen').show();
+        $(document).unbind('keypress', keyPress);
+        $('#playerName').focus()
+    }
+
+    function join(event) {
+        event.preventDefault();
+        sendMessage(['join']);
+    }
+
     $().ready(function() {
+        $('#btnConnect').click(connect);
+        $('#btnDisconnect').click(disconnect);
+        $('#btnJoin').click(join);
+        // noinspection JSUnresolvedFunction
+        $('#playerName').focus().keyup(function(event) {
+           var code = event.code || event.keyCode || event.charCode;
 
-        $('#btnConnect').click(function() {
-            playerName = $('#playerName').val();
-            $('#status').text("connecting...");
-
-            ws = new WebSocket('ws://' + location.host + '/connect');
-            ws.onopen = openHandler;
-            ws.onmessage = messageHandler;
-            ws.onclose = closeHandler;
-            ws.onerror = function(e) {
-                $('#status').text(e.toString());
-            };
-        });
-
-        $('#btnDisconnect').click(function() {
-            if (ws) {
-                ws.close();
-            }
-
-            $('#playScreen').hide();
-            $('#mainScreen').show();
-            $(document).unbind('keypress', keyHandler);
-        });
-
-        $('#btnJoin').click(function() {
-            sendMessage(['join']);
+           if (code === 13 || code === 'Enter') {
+               $('#btnConnect').click();
+           }
         });
     });
 </script>
@@ -238,7 +296,7 @@
                 <h3>Active players</h3>
             </div>
             <div id="worldHolder">
-                <table id="world" cellspacing="0" cellpadding="0"></table>
+                <table id="world"></table>
             </div>
             <div id="topScores">
                 <h3>Top scores</h3>

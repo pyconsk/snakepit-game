@@ -14,6 +14,7 @@ logger = getLogger(__name__)
 
 class RobotPlayer(Messaging):
     def __init__(self, name, snake_class=RobotSnake, url='http://localhost:8000/connect'):
+        self._first_render_sent = False
         self.loop = None
         self.running = False
         self.name = name
@@ -22,7 +23,7 @@ class RobotPlayer(Messaging):
         self.world = World()
         self.players = {}
         self.top_scores = []
-        self.snake = snake_class(self.world)
+        self.snake = snake_class(self.world, None)
         self.keymap = {
             RobotSnake.LEFT: 37,
             RobotSnake.UP: 38,
@@ -44,20 +45,23 @@ class RobotPlayer(Messaging):
                 self.id = args[2]
             elif cmd == self.MSG_RESET_WORLD:
                 self.world.reset()
+            elif cmd == self.MSG_ERROR:
+                raise SystemError(args[1])
             elif cmd == self.MSG_WORLD:
                 self.world.load(args[1])
             elif cmd == self.MSG_RENDER:
                 x, y = args[1], args[2]
                 self.world[y][x] = Char(args[3], args[4])
-                tick = True
+
+                if self._first_render_sent:
+                    tick = True
+                else:
+                    self._first_render_sent = start = True
 
             elif cmd == self.MSG_P_JOINED:
                 player_id = args[1]
                 logger.info('New player: %s', args)
                 self.players[player_id] = args[1:]
-
-                if player_id == self.id:
-                    start = True
 
             elif cmd == self.MSG_P_GAMEOVER:
                 player_id = args[1]
@@ -115,8 +119,7 @@ class RobotPlayer(Messaging):
                         logger.info('Connection closed')
                         break
                     elif msg.type == WSMsgType.ERROR:
-                        logger.error('Connection error')
-                        break
+                        raise SystemError('Connection error')
                     else:
                         logger.warning('Unknown message type: %s', msg.type)
 
@@ -151,7 +154,7 @@ class RobotPlayer(Messaging):
                 self.snake.game_over()
             else:
                 if start:
-                    self.snake.color = self.players[self.id][3]
+                    self.snake.color = self.players[self.id][2]
 
                 direction = self.snake.next_direction(initial=start)
                 response_msg = self.keymap.get(direction, None)

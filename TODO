@@ -1,4 +1,5 @@
 game
+  - player (snake) collisions during one frame load
   - top scores in redis
   - design
   - auto-connect user

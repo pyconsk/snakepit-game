@@ -8,6 +8,7 @@ from .snake import Snake
 from .player import Player
 from .messaging import Messaging
 from .datatypes import Char, Draw
+from .exceptions import SnakeError
 
 logger = getLogger(__name__)
 
@@ -16,6 +17,8 @@ class Game(Messaging):
     COLOR_0 = World.COLOR_0
     CH_VOID = World.CH_VOID
     CH_STONE = World.CH_STONE
+
+    GAME_OVER_TEXT = ">>> GAME OVER <<<"
 
     def __init__(self):
         self._last_id = 0
@@ -91,8 +94,8 @@ class Game(Messaging):
     @staticmethod
     def _render_text(text, color):
         # render in the center of play field
-        pos_y = int(settings.FIELD_SIZE_Y / 2)
-        pos_x = int(settings.FIELD_SIZE_X / 2 - len(text)/2)
+        pos_y = int(World.SIZE_Y / 2)
+        pos_x = int(World.SIZE_X / 2 - len(text)/2)
         render = []
 
         for i in range(0, len(text)):
@@ -116,16 +119,14 @@ class Game(Messaging):
         self._send_msg_all(self.MSG_RESET_WORLD)
 
     def _get_spawn_place(self):
-        x, y = None, None
-
         for i in range(0, 2):
-            x = randint(0, settings.FIELD_SIZE_X - 1)
-            y = randint(0, settings.FIELD_SIZE_Y - 1)
+            x = randint(0, World.SIZE_X - 1)
+            y = randint(0, World.SIZE_Y - 1)
 
             if self._world[y][x].char == self.CH_VOID:
-                break
+                return x, y
 
-        return x, y
+        return None, None
 
     def spawn_digit(self, right_now=False):
         render = []
@@ -193,7 +194,7 @@ class Game(Messaging):
         color = self._pick_player_color()
 
         # init snake
-        player.new_snake(color)
+        player.new_snake(self._world, color)
         # notify all about new player
         self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
 
@@ -206,9 +207,12 @@ class Game(Messaging):
             killer = self.get_player_by_color(ch_hit.color)
 
             if killer:
-                logger.info('Player %s was killed by %s', player, killer)
-                killer.score += settings.KILL_POINTS
-                messages.append([self.MSG_P_SCORE, killer.id, killer.score])
+                if killer == player:
+                    logger.info('%r committed suicide', player)
+                else:
+                    logger.info('%r was killed by %r', player, killer)
+                    killer.score += settings.KILL_POINTS
+                    messages.append([self.MSG_P_SCORE, killer.id, killer.score])
 
         self._send_msg_all_multi(messages)
         self._return_player_color(player.color)
@@ -218,13 +222,13 @@ class Game(Messaging):
         render = player.snake.render_game_over()
 
         if not self.players_alive_count:
-            render += self._render_text(" >>> GAME OVER <<< ", self._pick_random_color())
+            render += self._render_text(self.GAME_OVER_TEXT, self._pick_random_color())
             self._store_top_scores()
 
         return render
 
     def player_disconnected(self, player):
-        logger.info('Removing player %s', player)
+        logger.info('Removing %r', player)
         player.ws = None
 
         if player.alive:
@@ -237,7 +241,7 @@ class Game(Messaging):
     def disconnect_closed(self):
         for player in list(self._players.values()):
             if player.ws.closed or player.ws.close_code:
-                logger.warning('Disconnection dead player %s', player)
+                logger.warning('Disconnecting dead %r', player)
                 self.player_disconnected(player)
 
     def next_frame(self):
@@ -253,8 +257,8 @@ class Game(Messaging):
                 # check next position's content
                 pos = p.snake.next_position()
                 # check bounds
-                if pos.x < 0 or pos.x >= settings.FIELD_SIZE_X or\
-                   pos.y < 0 or pos.y >= settings.FIELD_SIZE_Y:
+                if pos.x < 0 or pos.x >= World.SIZE_X or\
+                   pos.y < 0 or pos.y >= World.SIZE_Y:
                     render_all += self.game_over(p)
                     continue
 
@@ -278,10 +282,16 @@ class Game(Messaging):
                 # spawn digits proportionally to the number of snakes
                 render_all += self.spawn_digit()
             else:
-                # newborn snake
-                render_all += p.snake.render_new()
-                # and it's birthday present
-                render_all += self.spawn_digit(right_now=True)
+                try:
+                    # newborn snake
+                    render_all += p.snake.render_new()
+                except SnakeError as exc:
+                    logger.warning('%r snake cannot be created: %s', p, exc)
+                    self._send_msg(p, self.MSG_ERROR, str(exc))
+                    render_all += self.game_over(p)
+                else:
+                    # and it's birthday present
+                    render_all += self.spawn_digit(right_now=True)
 
         if settings.STONES_ENABLED:
             render_all += self.spawn_stone()

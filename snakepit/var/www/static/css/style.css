@@ -17,6 +17,7 @@ footer p {
 
 h1 {
     font-size: 2.5em;
+    margin-bottom: 0.2em;
 }
 
 h2 {
@@ -25,6 +26,7 @@ h2 {
 
 h3 {
     font-size: 1.2em;
+    margin-top: 0;
 }
 
 a {
@@ -159,7 +161,7 @@ ol li {
 }
 
 #status {
-    outline: 1px solid #7FDBFF;
+    outline: 1px solid cyan;
     position: fixed;
     bottom: 1px;
     left: 1px;
@@ -223,14 +225,15 @@ ol li {
     border:0;
     margin:0;
     line-height: 1em;
-    table-layout: fixed
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
 }
 
 /*noinspection CssUnusedSymbol*/
 #world .td {
     width: 1em;
     height: 1em;
-
     padding:0;
     margin:0;
     line-height: 1em;
