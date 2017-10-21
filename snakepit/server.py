@@ -70,6 +70,9 @@ async def game_loop(game):
             await asyncio.sleep(1./settings.GAME_SPEED)
 
             game.disconnect_closed()
+    except BaseException as exc:
+        game.send_error_all("Internal server error: %s" % exc)
+        raise
     finally:
         game.running = False
 

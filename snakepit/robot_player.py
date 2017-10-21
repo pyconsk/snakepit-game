@@ -63,6 +63,9 @@ class RobotPlayer(Messaging):
                 logger.info('New player: %s', args)
                 self.players[player_id] = args[1:]
 
+                if player_id == self.id:
+                    self.snake.color = args[3]
+
             elif cmd == self.MSG_P_GAMEOVER:
                 player_id = args[1]
                 logger.info('Game over for player: %s' % self.players.pop(player_id, None))
@@ -153,9 +156,6 @@ class RobotPlayer(Messaging):
             if stop:
                 self.snake.game_over()
             else:
-                if start:
-                    self.snake.color = self.players[self.id][2]
-
                 direction = self.snake.next_direction(initial=start)
                 response_msg = self.keymap.get(direction, None)
 

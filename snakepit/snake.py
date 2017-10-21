@@ -72,6 +72,7 @@ class Snake(BaseSnake):
 
         for i in range(0, settings.INIT_LENGTH):
             target = self._world[pos.y][pos.x]
+
             if target.char != self.CH_VOID:
                 raise SnakePlacementError('Cannot place snake on %r because the position '
                                           'is occupied by %r', pos, target)
@@ -110,7 +111,7 @@ class Snake(BaseSnake):
         return Position(self.body[0].x + self.direction.xdir,
                         self.body[0].y + self.direction.ydir)
 
-    def render_move(self):
+    def render_move(self, ignore_tail=False):
         # moving snake to the next position
         render = []
         new_head = self.next_position()
@@ -128,7 +129,8 @@ class Snake(BaseSnake):
         else:
             # otherwise the tail moves
             old_tail = self.body.pop()
-            render.append(Draw(old_tail.x, old_tail.y, self.CH_VOID, self.COLOR_0))
+            if not ignore_tail:
+                render.append(Draw(old_tail.x, old_tail.y, self.CH_VOID, self.COLOR_0))
             new_tail = self.body[-1]
             render.append(Draw(new_tail.x, new_tail.y, self.CH_TAIL, self.color))
 

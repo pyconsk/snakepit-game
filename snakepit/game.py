@@ -7,17 +7,13 @@ from .world import World
 from .snake import Snake
 from .player import Player
 from .messaging import Messaging
-from .datatypes import Char, Draw
+from .datatypes import Char, Draw, Render
 from .exceptions import SnakeError
 
 logger = getLogger(__name__)
 
 
 class Game(Messaging):
-    COLOR_0 = World.COLOR_0
-    CH_VOID = World.CH_VOID
-    CH_STONE = World.CH_STONE
-
     GAME_OVER_TEXT = ">>> GAME OVER <<<"
 
     def __init__(self):
@@ -35,11 +31,15 @@ class Game(Messaging):
         self._send_one(player.ws, [args])
 
     def _send_msg_all_multi(self, messages):
-        wss = (player.ws for player in self._players.values())
-        self._send_all(wss, messages)
+        if messages:
+            wss = (player.ws for player in self._players.values())
+            self._send_all(wss, messages)
 
     def _send_msg_all(self, *args):
         self._send_msg_all_multi([args])
+
+    def send_error_all(self, msg):
+        self._send_msg_all(self.MSG_ERROR, msg)
 
     @staticmethod
     def _read_top_scores():
@@ -112,7 +112,7 @@ class Game(Messaging):
             # send messages
             messages.append([self.MSG_RENDER] + list(draw))
 
-        self._send_msg_all_multi(messages)
+        return messages
 
     def reset_world(self):
         self._world.reset()
@@ -123,7 +123,7 @@ class Game(Messaging):
             x = randint(0, World.SIZE_X - 1)
             y = randint(0, World.SIZE_Y - 1)
 
-            if self._world[y][x].char == self.CH_VOID:
+            if self._world[y][x].char == World.CH_VOID:
                 return x, y
 
         return None, None
@@ -148,7 +148,7 @@ class Game(Messaging):
             x, y = self._get_spawn_place()
 
             if x and y:
-                render += [Draw(x, y, self.CH_STONE, self.COLOR_0)]
+                render += [Draw(x, y, World.CH_STONE, World.COLOR_0)]
 
         return render
 
@@ -198,11 +198,13 @@ class Game(Messaging):
         # notify all about new player
         self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
 
-    def game_over(self, player, ch_hit=None):
+    def game_over(self, player, ch_hit=None, frontal_crash=False):
         player.alive = False
         messages = [[self.MSG_P_GAMEOVER, player.id]]
 
-        if ch_hit and ch_hit.char in Snake.BODY_CHARS:
+        if frontal_crash:
+            logger.info('%r died together with another snake', player)
+        elif ch_hit and ch_hit.char in Snake.BODY_CHARS:
             # someone has killed this player
             killer = self.get_player_by_color(ch_hit.color)
 
@@ -213,6 +215,10 @@ class Game(Messaging):
                     logger.info('%r was killed by %r', player, killer)
                     killer.score += settings.KILL_POINTS
                     messages.append([self.MSG_P_SCORE, killer.id, killer.score])
+            else:
+                logger.info('%r crashed into a snake', player)
+        else:
+            logger.info('%r crashed into the wall', player)
 
         self._send_msg_all_multi(messages)
         self._return_player_color(player.color)
@@ -233,7 +239,8 @@ class Game(Messaging):
 
         if player.alive:
             render = self.game_over(player)
-            self._apply_render(render)
+            messages = self._apply_render(render)
+            self._send_msg_all_multi(messages)
 
         del self._players[player.id]
         del player
@@ -245,60 +252,118 @@ class Game(Messaging):
                 self.player_disconnected(player)
 
     def next_frame(self):
+        # This list may change during iteration to change the order of figuring a player's move
+        # Sometimes a player's move depends on other player.
+        players = list(self._players.values())
         messages = []
-        render_all = []
+        render_all = Render()
+        new_players = []
+        frontal_crashers = set()
 
-        for p_id, p in self._players.items():
-            if not p.alive:
+        for player in players:
+            if not player.alive:
                 continue
 
             # check if snake already exists
-            if p.snake and len(p.snake.body):
+            if player.snake and len(player.snake.body):
                 # check next position's content
-                pos = p.snake.next_position()
+                next_pos = player.snake.next_position()
+
                 # check bounds
-                if pos.x < 0 or pos.x >= World.SIZE_X or\
-                   pos.y < 0 or pos.y >= World.SIZE_Y:
-                    render_all += self.game_over(p)
+                if self._world.is_invalid_position(next_pos):
+                    render_all += self.game_over(player)
                     continue
 
-                ch = self._world[pos.y][pos.x]
-                char = ch.char
+                cur_ch = self._world[next_pos.y][next_pos.x]
+                next_ch = render_all.get(next_pos, None)
                 grow = 0
+                tail_chase = False  # targeting a new void char
+                tail_crash = False  # hitting a tail for sure
+                own_tail_chaser = False
 
-                if char.isdigit():
+                # special cases
+                if next_ch:  # check already rendered chars
+                    if next_ch.char in Snake.DEAD_BODY_CHARS:
+                        logger.debug('%r is going to hit a dying snake', player)
+                    elif next_ch.char == Snake.CH_HEAD and cur_ch.char == World.CH_VOID:
+                        other_player = self.get_player_by_color(next_ch.color)
+                        frontal_crashers.add(player)
+                        frontal_crashers.add(other_player)
+                        logger.debug('%r is going to frontally crash into %r', player, other_player)
+                    elif next_ch.char == Snake.CH_TAIL and cur_ch.char == Snake.CH_TAIL:
+                        tail_crash = True
+                        logger.debug('%r is going to hit %r snake\'s tail',
+                                     player, self.get_player_by_color(cur_ch.color))
+                    elif next_ch.char == World.CH_VOID and cur_ch.char == Snake.CH_TAIL:
+                        tail_chase = True
+                        logger.debug('%r is chasing %r\'s tail', player, self.get_player_by_color(cur_ch.color))
+                    elif next_ch.char in Snake.BODY_CHARS:
+                        logger.debug('%r is going to hit %r\'s snake', player, self.get_player_by_color(cur_ch.color))
+                    else:
+                        logger.warning('Unexpected situation in the world ("%s") while rendering %r move',
+                                       next_ch, player)
+
+                # next move
+                if cur_ch.char.isdigit():  # yummy
                     # start growing next turn in case we eaten a digit
-                    grow = int(char)
-                    p.score += grow
-                    messages.append([self.MSG_P_SCORE, p_id, p.score])
+                    grow = int(cur_ch.char)
+                    player.score += grow
+                    messages.append([self.MSG_P_SCORE, player.id, player.score])
 
-                elif char != self.CH_VOID:
-                    render_all += self.game_over(p, ch_hit=ch)
+                elif cur_ch.char == Snake.CH_TAIL and not tail_crash:  # special case: hitting someone's tail
+                    if cur_ch.color == player.color:
+                        other_player = player
+                        own_tail_chaser = True
+                    else:
+                        other_player = self.get_player_by_color(player.color)
+
+                    if other_player.snake.grow:  # the tail won't move -> going to die anyway
+                        render_all += self.game_over(player, ch_hit=cur_ch)
+                        continue
+                    elif own_tail_chaser:  # make move (follow tail) + skip old tail rendering
+                        logger.debug('%r is chasing his own tail', player)
+                    elif not tail_chase:  # wait if the other snake's tail moves
+                        players.append(player)
+                        continue
+
+                elif cur_ch.char != World.CH_VOID and not tail_chase:
+                    render_all += self.game_over(player, ch_hit=cur_ch)
                     continue
 
-                render_all += p.snake.render_move()
-                p.snake.grow += grow
+                render_all += player.snake.render_move(ignore_tail=own_tail_chaser)
+                player.snake.grow += grow
 
                 # spawn digits proportionally to the number of snakes
                 render_all += self.spawn_digit()
             else:
-                try:
-                    # newborn snake
-                    render_all += p.snake.render_new()
-                except SnakeError as exc:
-                    logger.warning('%r snake cannot be created: %s', p, exc)
-                    self._send_msg(p, self.MSG_ERROR, str(exc))
-                    render_all += self.game_over(p)
-                else:
-                    # and it's birthday present
-                    render_all += self.spawn_digit(right_now=True)
+                new_players.append(player)
 
+        # render game over for players that bumped into each other with their heads
+        for player in frontal_crashers:
+            render_all += self.game_over(player, frontal_crash=True)
+
+        # render current snake moves -> update world before creating new players
+        messages += self._apply_render(render_all.values())
+        render_all.clear()
+
+        for new_player in new_players:
+            try:
+                # newborn snake
+                render_all += new_player.snake.render_new()
+            except SnakeError as exc:
+                logger.warning('%r snake cannot be created: %s', new_player, exc)
+                self._send_msg(new_player, self.MSG_ERROR, str(exc))
+                render_all += self.game_over(new_player)
+            else:
+                # and it's birthday present
+                render_all += self.spawn_digit(right_now=True)
+
+        # render new snakes -> update world before creating stones
+        messages += self._apply_render(render_all.values())
+
+        # render stone
         if settings.STONES_ENABLED:
-            render_all += self.spawn_stone()
+            messages += self._apply_render(self.spawn_stone())
 
-        # send all render messages
-        self._apply_render(render_all)
-
-        # send additional messages
-        if messages:
-            self._send_msg_all_multi(messages)
+        # send all messages
+        self._send_msg_all_multi(messages)

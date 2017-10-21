@@ -9,7 +9,7 @@ DEBUG = True
 
 # Logging
 LOG_FORMAT = '%(asctime)s %(levelname)-8s %(name)s: %(message)s'
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 # Snake-pit settings
 GAME_SPEED = 2.3  # fps, the more the faster
@@ -30,7 +30,7 @@ DIGIT_MAX = 9
 
 KILL_POINTS = 1000  # player points for a successful kill
 
-STONES_ENABLED = True
+STONES_ENABLED = False
 
 DIGIT_SPAWN_RATE = 6  # probability to spawn per frame in %
 STONE_SPAWN_RATE = 6  # digit spawn is calculated for every snake while stone spawn is calculated once per frame
