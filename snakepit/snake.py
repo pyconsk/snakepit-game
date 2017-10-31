@@ -50,6 +50,7 @@ class Snake(BaseSnake):
     def __init__(self, *args, **kwargs):
         super(Snake, self).__init__(*args, **kwargs)
         self.body = deque()
+        self.grew = False
 
     def reset(self):
         self.grow = 0
@@ -126,7 +127,9 @@ class Snake(BaseSnake):
         # if we grow this turn, the tail remains in place
         if self.grow > 0:
             self.grow -= 1
+            self.grew = True
         else:
+            self.grew = False
             # otherwise the tail moves
             old_tail = self.body.pop()
             if not ignore_tail:

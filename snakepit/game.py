@@ -1,6 +1,7 @@
 import json
 from logging import getLogger
 from random import randint, choice
+from collections import defaultdict
 
 from . import settings
 from .world import World
@@ -259,6 +260,7 @@ class Game(Messaging):
         render_all = Render()
         new_players = []
         frontal_crashers = set()
+        moves = defaultdict(int)
 
         for player in players:
             if not player.alive:
@@ -308,21 +310,28 @@ class Game(Messaging):
                     # start growing next turn in case we eaten a digit
                     grow = int(cur_ch.char)
                     player.score += grow
+                    logger.debug('%r ate the number "%s"', player, grow)
                     messages.append([self.MSG_P_SCORE, player.id, player.score])
 
                 elif cur_ch.char == Snake.CH_TAIL and not tail_crash:  # special case: hitting someone's tail
                     if cur_ch.color == player.color:
                         other_player = player
                         own_tail_chaser = True
+                        other_player_moved = False
                     else:
-                        other_player = self.get_player_by_color(player.color)
+                        other_player = self.get_player_by_color(cur_ch.color)
+                        other_player_moved = moves.get(other_player.id, False)
 
-                    if other_player.snake.grow:  # the tail won't move -> going to die anyway
+                    if ((not other_player_moved and other_player.snake.grow) or
+                            (other_player_moved and other_player.snake.grew)):
+                        # the tail won't move -> going to die anyway
                         render_all += self.game_over(player, ch_hit=cur_ch)
                         continue
                     elif own_tail_chaser:  # make move (follow tail) + skip old tail rendering
                         logger.debug('%r is chasing his own tail', player)
                     elif not tail_chase:  # wait if the other snake's tail moves
+                        if moves.get(player.id, 0) > len(self._players):
+                            raise RuntimeError('infinite loop')
                         players.append(player)
                         continue
 
@@ -332,6 +341,7 @@ class Game(Messaging):
 
                 render_all += player.snake.render_move(ignore_tail=own_tail_chaser)
                 player.snake.grow += grow
+                moves[player.id] += 1
 
                 # spawn digits proportionally to the number of snakes
                 render_all += self.spawn_digit()
