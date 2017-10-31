@@ -287,7 +287,7 @@ class Game(Messaging):
                 if next_ch:  # check already rendered chars
                     if next_ch.char in Snake.DEAD_BODY_CHARS:
                         logger.debug('%r is going to hit a dying snake', player)
-                    elif next_ch.char == Snake.CH_HEAD and cur_ch.char == World.CH_VOID:
+                    elif next_ch.char == Snake.CH_HEAD and (cur_ch.char == World.CH_VOID or cur_ch.isdigit()):
                         other_player = self.get_player_by_color(next_ch.color)
                         frontal_crashers.add(player)
                         frontal_crashers.add(other_player)
