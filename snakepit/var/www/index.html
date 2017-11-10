@@ -7,8 +7,21 @@
   <script type="text/javascript" src="static/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript">
     var ws;
+    var gameSettings;
     var playerName;
     var playerId;
+    var frameId;
+    var fps;
+
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
 
     function sendMessage(msgArray) {
         var msg = JSON.stringify(msgArray);
@@ -16,12 +29,19 @@
     }
 
     function openHandler(){
-        $('#status').text("connected to server");
+        $('#status').html(
+            'connected to server | ' +
+            'fps: <span id="fps"></span><span id="fpsMax"></span> | ' +
+            'frame: <span id="frameId"></span><span id="frameIdMax"></span>'
+        );
         playerName = $('#playerName').val();
+        frameId = $('#frameId');
+        fps = $('#fps');
 
         sendMessage(["new_player", playerName]);
 
         $('#mainScreen').hide();
+        $('#version').hide();
         $('#playScreen').show();
         $('#btnJoin').show();
 
@@ -48,6 +68,19 @@
                 case('handshake'):
                     $('#username').text(args[1]);
                     playerId = args[2];
+                    gameSettings = args[3];
+                    $('#fps').text(gameSettings.speed);
+                    // noinspection JSUnresolvedVariable
+                    if (gameSettings.GAME_SPEED_MAX) {
+                        // noinspection JSUnresolvedVariable
+                        $('#fpsMax').text(' / ' + gameSettings.GAME_SPEED_MAX)
+                    }
+                    $('#frameId').text(gameSettings.frame);
+                    // noinspection JSUnresolvedVariable
+                    if (gameSettings.GAME_FRAMES_MAX) {
+                        // noinspection JSUnresolvedVariable
+                        $('#frameIdMax').text(' / ' + gameSettings.GAME_FRAMES_MAX)
+                    }
                     break;
                 case('world'):
                     initWorld(args[1]);
@@ -59,15 +92,17 @@
                     resetWorld();
                     break;
                 case('render'):
-                    var x = args[1];
-                    var y = args[2];
+                    var x = args[3];
+                    var y = args[4];
                     var cell_id = '#cell' + y + '_' + x;
-                    var symbol = args[3];
+                    var symbol = args[5];
                     if (symbol === ' ') {
                         symbol = '&nbsp;';
                     }
                     $(cell_id).html(symbol);
-                    $(cell_id).attr('class', 'color' + args[4]);
+                    $(cell_id).attr('class', 'color' + args[6]);
+                    frameId.text(args[1]);
+                    fps.text(args[2]);
                     break;
                 case('p_joined'):
                     var id = args[1];
@@ -191,6 +226,13 @@
                     $('#btnJoin').click();
                 }
                 return;
+            case('Escape'):
+            case(27):  // Esc
+                // noinspection JSJQueryEfficiency
+                if ($('#btnDisconnect').is(':visible')) {
+                    $('#btnDisconnect').click();
+                }
+                return;
             default:
                 return;
         }
@@ -227,6 +269,7 @@
 
         $('#playScreen').hide();
         $('#mainScreen').show();
+        $('#version').show();
         $(document).unbind('keypress', keyPress);
         $('#playerName').focus()
     }
@@ -237,10 +280,13 @@
     }
 
     $().ready(function() {
+        var auto_connect = getParameterByName('connect');
+
+        // noinspection JSJQueryEfficiency
         $('#btnConnect').click(connect);
         $('#btnDisconnect').click(disconnect);
         $('#btnJoin').click(join);
-        // noinspection JSUnresolvedFunction
+        // noinspection JSUnresolvedFunction,JSJQueryEfficiency
         $('#playerName').focus().keyup(function(event) {
            var code = event.code || event.keyCode || event.charCode;
 
@@ -248,12 +294,16 @@
                $('#btnConnect').click();
            }
         });
+        if (auto_connect) {
+            $('#playerName').val(auto_connect);
+            $('#btnConnect').click();
+        }
     });
 </script>
 </head>
 <body>
-<h1>Snakepit</h1>
-<h3>ver 0.15</h3>
+<h1 id="title">Snakepit</h1>
+<h3 id="version">ver 0.15</h3>
 
 <div>
     <div id="mainScreen">
@@ -289,6 +339,7 @@
         </div>
         <div id="userButtons">
             <button id="btnJoin">Join!</button>
+            <button id="btnDisconnect">Disconnect</button>
         </div>
 
         <div id="playField">

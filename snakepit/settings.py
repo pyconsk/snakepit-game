@@ -5,21 +5,25 @@ PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 WEB_ROOT = os.path.join(PROJECT_DIR, 'var', 'www')
 TOP_SCORES_FILE = os.path.join(PROJECT_DIR, 'var', 'run', 'top_scores.txt')
 
-DEBUG = True
+DEBUG = False
 
 # Logging
 LOG_FORMAT = '%(asctime)s %(levelname)-8s %(name)s: %(message)s'
 LOG_LEVEL = logging.INFO
 
 # Snake-pit settings
-GAME_SPEED = 2.3  # fps, the more the faster
+GAME_SPEED = 6.0  # fps, the more the faster
+GAME_SPEED_INCREASE = None  # frame number after which the game should get faster (see GAME_SPEED_INCREASE_RATE)
+GAME_SPEED_INCREASE_RATE = 0.001  # apply this factor to current game speed during each frame
+GAME_SPEED_MAX = None  # fps limit when GAME_SPEED_INCREASE is active
+GAME_FRAMES_MAX = None  # maximum number of frames; the game ends at this point
 
 MAX_PLAYERS = 6
 MAX_TOP_SCORES = 15
 NUM_COLORS = 6  # set according to the number of css classes
 
-FIELD_SIZE_X = 50  # game field size in characters
-FIELD_SIZE_Y = 25
+FIELD_SIZE_X = 40  # game field size in characters
+FIELD_SIZE_Y = 40
 
 INIT_LENGTH = 5
 INIT_MIN_DISTANCE_BORDER = 2

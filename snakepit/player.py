@@ -23,8 +23,8 @@ class Player:
     def __repr__(self):
         return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, self.id, self.name, self.color)
 
-    def new_snake(self, world, color):
-        self.snake = Snake(world, color)
+    def new_snake(self, game_settings, world, color):
+        self.snake = Snake(game_settings, world, color)
 
     def keypress(self, code):
         if not self.alive:

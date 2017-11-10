@@ -15,6 +15,8 @@ logger = getLogger(__name__)
 class RobotPlayer(Messaging):
     def __init__(self, name, snake_class=RobotSnake, url='http://localhost:8000/connect'):
         self._first_render_sent = False
+        self.frame = 0
+        self.speed = 0
         self.loop = None
         self.running = False
         self.name = name
@@ -23,7 +25,7 @@ class RobotPlayer(Messaging):
         self.world = World()
         self.players = {}
         self.top_scores = []
-        self.snake = snake_class(self.world, None)
+        self.snake = snake_class({}, self.world, None)
         self.keymap = {
             RobotSnake.LEFT: 37,
             RobotSnake.UP: 38,
@@ -43,6 +45,9 @@ class RobotPlayer(Messaging):
             if cmd == self.MSG_HANDSHAKE:
                 self.name = args[1]
                 self.id = args[2]
+                self.snake._game_settings = settings = args[3]
+                self.speed = settings['speed']
+                self.frame = settings['frame']
             elif cmd == self.MSG_RESET_WORLD:
                 self.world.reset()
             elif cmd == self.MSG_ERROR:
@@ -50,8 +55,9 @@ class RobotPlayer(Messaging):
             elif cmd == self.MSG_WORLD:
                 self.world.load(args[1])
             elif cmd == self.MSG_RENDER:
-                x, y = args[1], args[2]
-                self.world[y][x] = Char(args[3], args[4])
+                self.frame, self.speed = args[1], args[2]
+                x, y = args[3], args[4]
+                self.world[y][x] = Char(args[5], args[6])
 
                 if self._first_render_sent:
                     tick = True

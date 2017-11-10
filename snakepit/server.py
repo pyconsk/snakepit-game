@@ -58,16 +58,30 @@ async def ws_handler(request):
 
 async def game_loop(game):
     game.running = True
+    game_sleep = 1.0 / game.speed
+    game_speed_max = settings.GAME_SPEED_MAX
+    game_speed_increase = settings.GAME_SPEED_INCREASE
+    game_speed_increase_rate = settings.GAME_SPEED_INCREASE_RATE
+    game_frames_max = settings.GAME_FRAMES_MAX
 
     try:
         while True:
             game.next_frame()
 
             if not game.players_alive_count:
-                logger.info('Stopping game loop')
+                logger.info('Stopping game loop - no players alive')
                 break
 
-            await asyncio.sleep(1./settings.GAME_SPEED)
+            if game_frames_max and game.frame >= game_frames_max:
+                logger.info('Maximum frames reached - killing all players')
+                game.kill_all()
+
+            if (game_speed_increase and game_speed_increase <= game.frame and
+                    (not game_speed_max or game.speed < game_speed_max)):
+                game.speed = round(game.speed + game.speed * game_speed_increase_rate, 6)
+                game_sleep = 1.0 / game.speed
+
+            await asyncio.sleep(game_sleep)
 
             game.disconnect_closed()
     except BaseException as exc:
@@ -83,8 +97,6 @@ def run(host=None, port=8000, debug=settings.DEBUG):
     app['game'] = Game()
 
     app.router.add_route('GET', '/connect', ws_handler)
-
-    if debug:
-        app.router.add_static('/', settings.WEB_ROOT)
+    app.router.add_static('/', settings.WEB_ROOT)
 
     web.run_app(app, host=host, port=port)

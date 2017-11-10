@@ -18,6 +18,7 @@ footer p {
 h1 {
     font-size: 2.5em;
     margin-bottom: 0.2em;
+    margin-top: 0.2em;
 }
 
 h2 {
@@ -187,6 +188,7 @@ ol li {
     color: #FFFFFF;
     display: inline-block;
     vertical-align: top;
+    margin-bottom: 1em;
 }
 
 /*noinspection CssUnusedSymbol,CssUnusedSymbol*/
@@ -230,11 +232,13 @@ ol li {
     border-spacing: 0;
 }
 
-/*noinspection CssUnusedSymbol*/
-#world .td {
+#world td {
     width: 1em;
     height: 1em;
     padding:0;
     margin:0;
     line-height: 1em;
+    font-size: 1em;
+    letter-spacing: 0;
+    font-kerning: none;
 }

@@ -32,7 +32,8 @@ class BaseSnake:
     color = None
     alive = False
 
-    def __init__(self, world, color):
+    def __init__(self, game_settings, world, color):
+        self._game_settings = game_settings
         self._world = world
         self.color = color
         self.alive = True

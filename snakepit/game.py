@@ -13,6 +13,22 @@ from .exceptions import SnakeError
 
 logger = getLogger(__name__)
 
+GAME_SETTINGS = (
+    'GAME_SPEED',
+    'GAME_SPEED_INCREASE',
+    'GAME_SPEED_INCREASE_RATE',
+    'GAME_SPEED_MAX',
+    'GAME_FRAMES_MAX',
+    'MAX_PLAYERS',
+    'FIELD_SIZE_X',
+    'FIELD_SIZE_Y',
+    'KILL_POINTS',
+    'INIT_LENGTH',
+    'DIGIT_MIN',
+    'DIGIT_MAX',
+    'STONES_ENABLED',
+)
+
 
 class Game(Messaging):
     GAME_OVER_TEXT = ">>> GAME OVER <<<"
@@ -23,7 +39,10 @@ class Game(Messaging):
         self._players = {}
         self._top_scores = self._read_top_scores()
         self._world = World()
+        self.frame = 0
         self.running = False
+        self.speed = settings.GAME_SPEED
+        self.settings = {attr: getattr(settings, attr) for attr in GAME_SETTINGS}
 
     def __repr__(self):
         return '<%s [players=%s]>' % (self.__class__.__name__, len(self._players))
@@ -111,11 +130,13 @@ class Game(Messaging):
             # apply to local
             self._world[draw.y][draw.x] = Char(draw.char, draw.color)
             # send messages
-            messages.append([self.MSG_RENDER] + list(draw))
+            messages.append([self.MSG_RENDER, self.frame, self.speed] + list(draw))
 
         return messages
 
     def reset_world(self):
+        self.frame = 0
+        self.speed = settings.GAME_SPEED
         self._world.reset()
         self._send_msg_all(self.MSG_RESET_WORLD)
 
@@ -172,7 +193,10 @@ class Game(Messaging):
         self._last_id += 1
         player = Player(self._last_id, name, ws)
 
-        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id)
+        settings = self.settings.copy()
+        settings['frame'] = self.frame
+        settings['speed'] = self.speed
+        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, settings)
         self._send_msg(player, self.MSG_WORLD, self._world)
         self._send_msg(player, self.MSG_TOP_SCORES, self.top_scores)
 
@@ -195,11 +219,11 @@ class Game(Messaging):
         color = self._pick_player_color()
 
         # init snake
-        player.new_snake(self._world, color)
+        player.new_snake(self.settings, self._world, color)
         # notify all about new player
         self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
 
-    def game_over(self, player, ch_hit=None, frontal_crash=False):
+    def game_over(self, player, ch_hit=None, frontal_crash=False, force=False):
         player.alive = False
         messages = [[self.MSG_P_GAMEOVER, player.id]]
 
@@ -218,6 +242,8 @@ class Game(Messaging):
                     messages.append([self.MSG_P_SCORE, killer.id, killer.score])
             else:
                 logger.info('%r crashed into a snake', player)
+        elif force:
+            logger.info('%r death caused by force majeure', player)
         else:
             logger.info('%r crashed into the wall', player)
 
@@ -252,7 +278,18 @@ class Game(Messaging):
                 logger.warning('Disconnecting dead %r', player)
                 self.player_disconnected(player)
 
+    def kill_all(self):
+        render = []
+
+        for player in self._players.values():
+            if player.alive:
+                render += self.game_over(player, force=True)
+
+        messages = self._apply_render(render)
+        self._send_msg_all_multi(messages)
+
     def next_frame(self):
+        self.frame += 1
         # This list may change during iteration to change the order of figuring a player's move
         # Sometimes a player's move depends on other player.
         players = list(self._players.values())
