@@ -251,7 +251,7 @@
 
         $('#status').text("connecting...");
         var url = location.pathname.substring(0, location.pathname.indexOf('/index.html')) + '/connect';
-        ws = new WebSocket((location.protocol === 'https:') ? 'wss://' : 'ws://' + location.host + url);
+        ws = new WebSocket(((location.protocol === 'https:') ? 'wss://' : 'ws://') + location.host + url);
         ws.onopen = openHandler;
         ws.onmessage = messageHandler;
         ws.onclose = closeHandler;
