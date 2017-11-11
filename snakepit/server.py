@@ -24,7 +24,7 @@ async def ws_handler(request):
     logger.info('Connected to "%s" from %s', request.url, client_address)
     game = request.app['game']
     player = None
-    ws = web.WebSocketResponse()
+    ws = web.WebSocketResponse(compress=False)
     await ws.prepare(request)
 
     # noinspection PyTypeChecker
