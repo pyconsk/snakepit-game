@@ -20,6 +20,9 @@ class Messaging:
     MSG_TOP_SCORES = 'top_scores'
     MSG_RENDER = 'render'
     MSG_ERROR = 'error'
+    MSG_PING = 'ping'
+    MSG_PONG = 'pong'
+    MSG_SYNC = 'sync'
 
     @staticmethod
     def _send_one(ws, message):

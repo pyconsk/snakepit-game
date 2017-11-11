@@ -1,6 +1,7 @@
 import asyncio
 import signal
 import json
+from time import time
 from logging import getLogger
 from aiohttp import ClientSession, WSMsgType
 
@@ -15,8 +16,11 @@ logger = getLogger(__name__)
 class RobotPlayer(Messaging):
     def __init__(self, name, snake_class=RobotSnake, url='http://localhost:8000/connect'):
         self._first_render_sent = False
+        self._last_ping = None
+        self._ws = None
         self.frame = 0
         self.speed = 0
+        self.latency = 0
         self.loop = None
         self.running = False
         self.name = name
@@ -42,7 +46,13 @@ class RobotPlayer(Messaging):
         for args in data:
             cmd = args[0]
 
-            if cmd == self.MSG_HANDSHAKE:
+            if cmd == self.MSG_PONG:
+                if self._last_ping == args[1]:
+                    # noinspection PyTypeChecker
+                    self.latency = time() * 1000 - self._last_ping
+                    self._last_ping = None
+                    logger.debug('Current latency: %s ms', round(self.latency, 2))
+            elif cmd == self.MSG_HANDSHAKE:
                 self.name = args[1]
                 self.id = args[2]
                 self.snake._game_settings = settings = args[3]
@@ -96,11 +106,20 @@ class RobotPlayer(Messaging):
 
         return response_msg
 
+    async def ping_pong(self):
+        while True:
+            if self._ws and not self._last_ping:
+                now = time() * 1000
+                self._ws.send_json([Messaging.MSG_PING, now, self.latency])
+                self._last_ping = now
+            await asyncio.sleep(1)
+
     async def ws_session(self):
         async with ClientSession() as session:
             async with session.ws_connect(self.url) as ws:
                 await ws.send_json([self.MSG_NEW_PLAYER, self.name])
                 await ws.send_json([self.MSG_JOIN])
+                self._ws = ws
 
                 async for msg in ws:
                     if msg.type == WSMsgType.TEXT:
@@ -132,6 +151,7 @@ class RobotPlayer(Messaging):
                     else:
                         logger.warning('Unknown message type: %s', msg.type)
 
+            self._ws = None
             logger.warning('Connection closed')
 
     def run(self):
@@ -141,6 +161,7 @@ class RobotPlayer(Messaging):
         self.running = True
         self.loop = asyncio.get_event_loop()
         self.loop.add_signal_handler(signal.SIGTERM, self.stop)
+        asyncio.ensure_future(self.ping_pong(), loop=self.loop)
 
         try:
             self.loop.run_until_complete(self.ws_session())

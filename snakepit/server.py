@@ -23,16 +23,24 @@ async def ws_handler(request):
     async for msg in ws:
         if msg.tp == web.MsgType.TEXT:
             logger.debug('Got message from %s: %s', client_address, msg.data)
-            data = json.loads(msg.data)
+
+            try:
+                data = json.loads(msg.data)
+            except ValueError:
+                logger.error('Invalid JSON data from %s: %s', client_address, msg.data)
+                continue
 
             if isinstance(data, int) and player:
                 # Interpret as key code
                 player.keypress(data)
-            elif not isinstance(data, list):
+            elif not isinstance(data, list) or not data:
                 logger.error('Invalid data from %s: %s', client_address, data)
                 continue
-            elif not player:
-                if data[0] == Messaging.MSG_NEW_PLAYER:
+            elif data[0] == Messaging.MSG_PING:
+                logger.debug('Received ping from %s (%s)', client_address, data[1:])
+                await ws.send_json([Messaging.MSG_PONG] + data[1:])
+            elif data[0] == Messaging.MSG_NEW_PLAYER:
+                if not player:
                     player = game.new_player(normalize_player_name(data[1]), ws)
                     logger.info('Creating new %r', player)
             elif data[0] == Messaging.MSG_JOIN:

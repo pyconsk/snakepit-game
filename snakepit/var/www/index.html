@@ -12,6 +12,10 @@
     var playerId;
     var frameId;
     var fps;
+    var latency;
+    var lastLatency = 0;
+    var lastPing = null;
+    var pingPongTimer = null;
 
     function getParameterByName(name, url) {
         if (!url) url = window.location.href;
@@ -28,15 +32,27 @@
         ws.send(msg);
     }
 
+    function pingPong() {
+        var currentTime;
+
+        if (ws && !lastPing) {
+            currentTime = new Date().getTime();
+            sendMessage(['ping', currentTime, lastLatency]);
+            lastPing = currentTime;
+        }
+    }
+
     function openHandler(){
         $('#status').html(
             'connected to server | ' +
             'fps: <span id="fps"></span><span id="fpsMax"></span> | ' +
-            'frame: <span id="frameId"></span><span id="frameIdMax"></span>'
+            'frame: <span id="frameId"></span><span id="frameIdMax"></span> | ' +
+            'latency: <span id="latency">?</span> ms'
         );
         playerName = $('#playerName').val();
         frameId = $('#frameId');
         fps = $('#fps');
+        latency = $('#latency');
 
         sendMessage(["new_player", playerName]);
 
@@ -46,14 +62,19 @@
         $('#btnJoin').show();
 
         $(document).bind('keydown', keyPress);
+
+        pingPongTimer = setInterval(pingPong, 1000)
     }
 
     function closeHandler(){
+        if (pingPongTimer) {
+            clearInterval(pingPongTimer);
+        }
+
         $('#status').text("disconnected from server");
     }
 
     function messageHandler(e){
-        // $("#status").text(e.data);
         var json = JSON.parse(e.data);
 
         if (!(json[0] instanceof Array)) {
@@ -135,6 +156,16 @@
                         color = players[n][2];
                         addTopScore(color, name, score);
                     }
+                    break;
+                case('pong'):
+                    if (lastPing === args[1]) {
+                        lastLatency = new Date().getTime() - lastPing;
+                        latency.text(lastLatency);
+                        lastPing = null;
+                    }
+                    break;
+                default:
+                    console.log('Unknown message', args);
                     break;
             }
         }
