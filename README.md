@@ -2,6 +2,18 @@
 
 Online multiplayer snake game written in [Python](https://www.python.org/) and [asyncio](https://docs.python.org/3/library/asyncio.html).
 
+## Installation
+
+```bash
+git clone https://github.com/pyconsk/snakepit-game
+cd snakepit-game
+python3.6 -m venv env
+source env/bin/activate
+pip install -r doc/requirements.txt
+export PYTHONPATH=$(pwd -P)
+bin/run.py
+```
+
 
 ## PyCon SK Contest
 
