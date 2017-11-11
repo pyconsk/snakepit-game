@@ -1,12 +1,11 @@
 import asyncio
-import json
 from logging import getLogger
 from aiohttp import web
 
 from . import settings
 from .game import Game
 from .utils import normalize_player_name, get_client_address, validate_settings
-from .messaging import Messaging
+from .messaging import json, Messaging
 
 logger = getLogger(__name__)
 
@@ -38,7 +37,7 @@ async def ws_handler(request):
                 continue
             elif data[0] == Messaging.MSG_PING:
                 logger.debug('Received ping from %s (%s)', client_address, data[1:])
-                await ws.send_json([Messaging.MSG_PONG] + data[1:])
+                await ws.send_json([Messaging.MSG_PONG] + data[1:], dumps=json.dumps)
             elif data[0] == Messaging.MSG_NEW_PLAYER:
                 if not player:
                     player = game.new_player(normalize_player_name(data[1]), ws)

@@ -1,4 +1,3 @@
-import json
 from logging import getLogger
 from random import randint, choice
 from collections import defaultdict
@@ -7,7 +6,7 @@ from . import settings
 from .world import World
 from .snake import Snake
 from .player import Player
-from .messaging import Messaging
+from .messaging import json, Messaging
 from .datatypes import Char, Draw, Render
 from .exceptions import SnakeError
 
@@ -130,7 +129,7 @@ class Game(Messaging):
             # apply to local
             self._world[draw.y][draw.x] = Char(draw.char, draw.color)
             # send messages
-            messages.append([self.MSG_RENDER, self.frame, self.speed] + list(draw))
+            messages.append([self.MSG_RENDER] + list(draw))
 
         return messages
 
@@ -193,10 +192,8 @@ class Game(Messaging):
         self._last_id += 1
         player = Player(self._last_id, name, ws)
 
-        game_settings = self.settings.copy()
-        game_settings['frame'] = self.frame
-        game_settings['speed'] = self.speed
-        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, game_settings)
+        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, self.settings)
+        self._send_msg(player, self.MSG_SYNC, self.frame, self.speed)
         self._send_msg(player, self.MSG_WORLD, self._world)
         self._send_msg(player, self.MSG_TOP_SCORES, self.top_scores)
 
@@ -297,7 +294,7 @@ class Game(Messaging):
         # This list may change during iteration to change the order of figuring a player's move
         # Sometimes a player's move depends on other player.
         players = list(self._players.values())
-        messages = []
+        messages = [[self.MSG_SYNC, self.frame, self.speed]]
         render_all = Render()
         new_players = []
         frontal_crashers = set()

@@ -75,28 +75,48 @@
     }
 
     function messageHandler(e){
-        var json = JSON.parse(e.data);
+        var data = JSON.parse(e.data);
 
-        if (!(json[0] instanceof Array)) {
-            json = [json];
+        if (!(data[0] instanceof Array)) {
+            data = [data];
         }
 
-        for (var i = 0; i < json.length; i++){
-            var args = json[i];
-            var cmd = json[i][0];
+        var i = data.length;
+
+        while (i--) {
+            var args = data[i];
+            var cmd = data[i][0];
 
             switch (cmd) {
+                case('render'):
+                    var cell_id = '#cell' + args[2] + '_' + args[1];
+                    var symbol = args[3];
+                    if (symbol === ' ') {
+                        symbol = '&nbsp;';
+                    }
+                    $(cell_id).html(symbol);
+                    $(cell_id).attr('class', 'color' + args[4]);
+                    break;
+                case('sync'):
+                    frameId.text(args[1]);
+                    fps.text(args[2]);
+                    break;
+                case('pong'):
+                    if (lastPing === args[1]) {
+                        lastLatency = new Date().getTime() - lastPing;
+                        latency.text(lastLatency);
+                        lastPing = null;
+                    }
+                    break;
                 case('handshake'):
                     $('#username').text(args[1]);
                     playerId = args[2];
                     gameSettings = args[3];
-                    $('#fps').text(gameSettings.speed);
                     // noinspection JSUnresolvedVariable
                     if (gameSettings.GAME_SPEED_MAX) {
                         // noinspection JSUnresolvedVariable
                         $('#fpsMax').text(' / ' + gameSettings.GAME_SPEED_MAX)
                     }
-                    $('#frameId').text(gameSettings.frame);
                     // noinspection JSUnresolvedVariable
                     if (gameSettings.GAME_FRAMES_MAX) {
                         // noinspection JSUnresolvedVariable
@@ -111,19 +131,6 @@
                     break;
                 case('reset_world'):
                     resetWorld();
-                    break;
-                case('render'):
-                    var x = args[3];
-                    var y = args[4];
-                    var cell_id = '#cell' + y + '_' + x;
-                    var symbol = args[5];
-                    if (symbol === ' ') {
-                        symbol = '&nbsp;';
-                    }
-                    $(cell_id).html(symbol);
-                    $(cell_id).attr('class', 'color' + args[6]);
-                    frameId.text(args[1]);
-                    fps.text(args[2]);
                     break;
                 case('p_joined'):
                     var id = args[1];
@@ -155,13 +162,6 @@
                         score = players[n][1];
                         color = players[n][2];
                         addTopScore(color, name, score);
-                    }
-                    break;
-                case('pong'):
-                    if (lastPing === args[1]) {
-                        lastLatency = new Date().getTime() - lastPing;
-                        latency.text(lastLatency);
-                        lastPing = null;
                     }
                     break;
                 default:

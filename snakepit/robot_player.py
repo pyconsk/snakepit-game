@@ -1,13 +1,12 @@
 import asyncio
 import signal
-import json
 from time import time
 from logging import getLogger
 from aiohttp import ClientSession, WSMsgType
 
 from .world import World
 from .datatypes import Char
-from .messaging import Messaging
+from .messaging import json, Messaging
 from .robot_snake import RobotSnake
 
 logger = getLogger(__name__)
@@ -52,28 +51,27 @@ class RobotPlayer(Messaging):
                     self.latency = time() * 1000 - self._last_ping
                     self._last_ping = None
                     logger.info('Current latency: %s ms', round(self.latency, 2))
+            if cmd == self.MSG_SYNC:
+                self.frame = args[1]
+                self.speed = args[2]
+            elif cmd == self.MSG_RENDER:
+                x, y = args[1], args[2]
+                self.world[y][x] = Char(args[3], args[4])
+
+                if self._first_render_sent:
+                    tick = True
+                else:
+                    self._first_render_sent = start = True
             elif cmd == self.MSG_HANDSHAKE:
                 self.name = args[1]
                 self.id = args[2]
-                self.snake._game_settings = settings = args[3]
-                self.speed = settings['speed']
-                self.frame = settings['frame']
+                self.snake._game_settings = args[3]
             elif cmd == self.MSG_RESET_WORLD:
                 self.world.reset()
             elif cmd == self.MSG_ERROR:
                 raise SystemError(args[1])
             elif cmd == self.MSG_WORLD:
                 self.world.load(args[1])
-            elif cmd == self.MSG_RENDER:
-                self.frame, self.speed = args[1], args[2]
-                x, y = args[3], args[4]
-                self.world[y][x] = Char(args[5], args[6])
-
-                if self._first_render_sent:
-                    tick = True
-                else:
-                    self._first_render_sent = start = True
-
             elif cmd == self.MSG_P_JOINED:
                 player_id = args[1]
                 logger.info('New player: %s', args)
@@ -81,7 +79,6 @@ class RobotPlayer(Messaging):
 
                 if player_id == self.id:
                     self.snake.color = args[3]
-
             elif cmd == self.MSG_P_GAMEOVER:
                 player_id = args[1]
                 logger.info('Game over for player: %s' % self.players.pop(player_id, None))
@@ -110,7 +107,7 @@ class RobotPlayer(Messaging):
         while True:
             if self._ws and not self._last_ping:
                 now = time() * 1000
-                self._ws.send_json([Messaging.MSG_PING, now, self.latency])
+                self._ws.send_json([Messaging.MSG_PING, now, self.latency], dumps=json.dumps)
                 self._last_ping = now
 
             if self.running:
@@ -124,8 +121,8 @@ class RobotPlayer(Messaging):
     async def ws_session(self):
         async with ClientSession() as session:
             async with session.ws_connect(self.url) as ws:
-                await ws.send_json([self.MSG_NEW_PLAYER, self.name])
-                await ws.send_json([self.MSG_JOIN])
+                await ws.send_json([self.MSG_NEW_PLAYER, self.name], dumps=json.dumps)
+                await ws.send_json([self.MSG_JOIN], dumps=json.dumps)
                 self._ws = ws
 
                 async for msg in ws:
@@ -148,7 +145,7 @@ class RobotPlayer(Messaging):
                         else:
                             if response_msg:
                                 logger.info('Sending message: %s', response_msg)
-                                await ws.send_json(response_msg)
+                                await ws.send_json(response_msg, dumps=json.dumps)
 
                     elif msg.type == WSMsgType.CLOSED:
                         logger.info('Connection closed')
