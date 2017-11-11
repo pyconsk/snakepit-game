@@ -11,7 +11,7 @@
     var playerName;
     var playerId;
     var frameId;
-    var fps;
+    var speed;
     var latency;
     var lastLatency = 0;
     var lastPing = null;
@@ -45,13 +45,13 @@
     function openHandler(){
         $('#status').html(
             'connected to server | ' +
-            'fps: <span id="fps"></span><span id="fpsMax"></span> | ' +
+            'speed: <span id="speed"></span><span id="speedMax"></span> | ' +
             'frame: <span id="frameId"></span><span id="frameIdMax"></span> | ' +
             'latency: <span id="latency">?</span> ms'
         );
         playerName = $('#playerName').val();
         frameId = $('#frameId');
-        fps = $('#fps');
+        speed = $('#speed');
         latency = $('#latency');
 
         sendMessage(["new_player", playerName]);
@@ -99,7 +99,7 @@
                     break;
                 case('sync'):
                     frameId.text(args[1]);
-                    fps.text(args[2]);
+                    speed.text(args[2]);
                     break;
                 case('pong'):
                     if (lastPing === args[1]) {
@@ -115,12 +115,12 @@
                     // noinspection JSUnresolvedVariable
                     if (gameSettings.GAME_SPEED_MAX) {
                         // noinspection JSUnresolvedVariable
-                        $('#fpsMax').text(' / ' + gameSettings.GAME_SPEED_MAX)
+                        $('#speedMax').text('/' + gameSettings.GAME_SPEED_MAX)
                     }
                     // noinspection JSUnresolvedVariable
                     if (gameSettings.GAME_FRAMES_MAX) {
                         // noinspection JSUnresolvedVariable
-                        $('#frameIdMax').text(' / ' + gameSettings.GAME_FRAMES_MAX)
+                        $('#frameIdMax').text('/' + gameSettings.GAME_FRAMES_MAX)
                     }
                     break;
                 case('world'):
