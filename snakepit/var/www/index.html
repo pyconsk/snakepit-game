@@ -203,7 +203,7 @@
     function addPlayer(id, color, name, score) {
         var color_class = 'color' + color;
 
-        $('#activePlayers').append('<div id="player' + id + '">'
+        $('#activePlayersList').append('<div id="player' + id + '">'
                         + '<div class="name ' + color_class +'">' + name + '</div>'
                         + '<div class="score ' + color_class + '">' + score + '</div></div>');
     }
@@ -300,6 +300,7 @@
 
         $('#playScreen').hide();
         $('#mainScreen').show();
+        $('#activePlayersList').empty();
         $('#version').show();
         $(document).unbind('keypress', keyPress);
         $('#playerName').focus()
@@ -376,6 +377,7 @@
         <div id="playField">
             <div id="activePlayers">
                 <h3>Active players</h3>
+                <div id="activePlayersList"></div>
             </div>
             <div id="worldHolder">
                 <table id="world"></table>
