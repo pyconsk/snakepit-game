@@ -1,4 +1,5 @@
 try:
+    # noinspection PyUnresolvedReferences
     import ujson as json
 except ImportError:
     import json

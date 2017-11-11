@@ -1,4 +1,13 @@
 import asyncio
+
+try:
+    # noinspection PyUnresolvedReferences
+    import uvloop
+except ImportError:
+    pass
+else:
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
 from logging import getLogger
 from aiohttp import web
 
