@@ -66,3 +66,8 @@ target/
 # Snakepit
 top_scores.txt
 local_settings.py
+
+# OS files
+.DS_Store
+*.swp
+*.test
