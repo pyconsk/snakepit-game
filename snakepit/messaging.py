@@ -1,10 +1,14 @@
 import json
 
+from aiohttp import WSCloseCode
+
 
 class Messaging:
     """
     WebSocket messaging helper class.
     """
+    WSCloseCode = WSCloseCode
+
     MSG_JOIN = 'join'
     MSG_NEW_PLAYER = 'new_player'
     MSG_HANDSHAKE = 'handshake'
@@ -29,3 +33,7 @@ class Messaging:
         for ws in wss:
             if ws:
                 ws.send_str(msg)
+
+    @staticmethod
+    async def _close(ws, code=WSCloseCode.GOING_AWAY, message='Closing connection'):
+        await ws.close(code=code, message=message)

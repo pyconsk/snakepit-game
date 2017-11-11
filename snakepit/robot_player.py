@@ -132,6 +132,8 @@ class RobotPlayer(Messaging):
                     else:
                         logger.warning('Unknown message type: %s', msg.type)
 
+            logger.warning('Connection closed')
+
     def run(self):
         if self.running:
             raise RuntimeError('Already running')

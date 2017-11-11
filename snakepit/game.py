@@ -193,10 +193,10 @@ class Game(Messaging):
         self._last_id += 1
         player = Player(self._last_id, name, ws)
 
-        settings = self.settings.copy()
-        settings['frame'] = self.frame
-        settings['speed'] = self.speed
-        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, settings)
+        game_settings = self.settings.copy()
+        game_settings['frame'] = self.frame
+        game_settings['speed'] = self.speed
+        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, game_settings)
         self._send_msg(player, self.MSG_WORLD, self._world)
         self._send_msg(player, self.MSG_TOP_SCORES, self.top_scores)
 
@@ -265,7 +265,7 @@ class Game(Messaging):
         player.ws = None
 
         if player.alive:
-            render = self.game_over(player)
+            render = self.game_over(player, force=True)
             messages = self._apply_render(render)
             self._send_msg_all_multi(messages)
 
@@ -287,6 +287,10 @@ class Game(Messaging):
 
         messages = self._apply_render(render)
         self._send_msg_all_multi(messages)
+
+    async def shutdown(self, code=Messaging.WSCloseCode.GOING_AWAY, message='Server shutdown'):
+        for player in list(self._players.values()):
+            await self._close(player.ws, code=code, message=message)
 
     def next_frame(self):
         self.frame += 1

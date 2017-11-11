@@ -91,12 +91,23 @@ async def game_loop(game):
         game.running = False
 
 
+async def on_shutdown(app):
+    logger.warning('Server shutdown')
+    game = app.get('game', None)
+
+    if game:
+        await game.shutdown()
+
+
 def run(host=None, port=8000, debug=settings.DEBUG):
     validate_settings(settings)
+
     app = web.Application(debug=debug)
     app['game'] = Game()
 
     app.router.add_route('GET', '/connect', ws_handler)
     app.router.add_static('/', settings.WEB_ROOT)
+
+    app.on_shutdown.append(on_shutdown)
 
     web.run_app(app, host=host, port=port)
