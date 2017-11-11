@@ -51,7 +51,7 @@ class RobotPlayer(Messaging):
                     # noinspection PyTypeChecker
                     self.latency = time() * 1000 - self._last_ping
                     self._last_ping = None
-                    logger.debug('Current latency: %s ms', round(self.latency, 2))
+                    logger.info('Current latency: %s ms', round(self.latency, 2))
             elif cmd == self.MSG_HANDSHAKE:
                 self.name = args[1]
                 self.id = args[2]
@@ -112,7 +112,14 @@ class RobotPlayer(Messaging):
                 now = time() * 1000
                 self._ws.send_json([Messaging.MSG_PING, now, self.latency])
                 self._last_ping = now
-            await asyncio.sleep(1)
+
+            if self.running:
+                try:
+                    await asyncio.sleep(1)
+                except asyncio.CancelledError:
+                    pass
+            else:
+                break
 
     async def ws_session(self):
         async with ClientSession() as session:
@@ -169,13 +176,19 @@ class RobotPlayer(Messaging):
             logger.warning('%s', exc)
         except KeyboardInterrupt as exc:
             logger.warning('Stopping %r (%r)', self, exc)
+        except asyncio.CancelledError:
+            pass
         finally:
-            self.loop.close()
+            self.stop()
             self.running = False
 
     def stop(self):
         if self.running and self.loop:
             logger.warning('Stopping %r', self)
+
+            for task in asyncio.Task.all_tasks():
+                task.cancel()
+
             self.loop.stop()
 
     def tick(self, start=False, stop=False):
