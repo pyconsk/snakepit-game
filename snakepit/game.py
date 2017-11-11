@@ -46,19 +46,19 @@ class Game(Messaging):
     def __repr__(self):
         return '<%s [players=%s]>' % (self.__class__.__name__, len(self._players))
 
-    def _send_msg(self, player, *args):
-        self._send_one(player.ws, [args])
+    async def _send_msg(self, player, *args):
+        await self._send_one(player.ws, [args])
 
-    def _send_msg_all_multi(self, messages):
+    async def _send_msg_all_multi(self, messages):
         if messages:
             wss = (player.ws for player in self._players.values())
-            self._send_all(wss, messages)
+            await self._send_all(wss, messages)
 
-    def _send_msg_all(self, *args):
-        self._send_msg_all_multi([args])
+    async def _send_msg_all(self, *args):
+        await self._send_msg_all_multi([args])
 
-    def send_error_all(self, msg):
-        self._send_msg_all(self.MSG_ERROR, msg)
+    async def send_error_all(self, msg):
+        await self._send_msg_all(self.MSG_ERROR, msg)
 
     @staticmethod
     def _read_top_scores():
@@ -133,11 +133,11 @@ class Game(Messaging):
 
         return messages
 
-    def reset_world(self):
+    async def reset_world(self):
         self.frame = 0
         self.speed = settings.GAME_SPEED
         self._world.reset()
-        self._send_msg_all(self.MSG_RESET_WORLD)
+        await self._send_msg_all(self.MSG_RESET_WORLD)
 
     def _get_spawn_place(self):
         for i in range(0, 2):
@@ -188,29 +188,29 @@ class Game(Messaging):
 
         return None
 
-    def new_player(self, name, ws):
+    async def new_player(self, name, ws):
         self._last_id += 1
         player = Player(self._last_id, name, ws)
 
-        self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, self.settings)
-        self._send_msg(player, self.MSG_SYNC, self.frame, self.speed)
-        self._send_msg(player, self.MSG_WORLD, self._world)
-        self._send_msg(player, self.MSG_TOP_SCORES, self.top_scores)
+        await self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, self.settings)
+        await self._send_msg(player, self.MSG_SYNC, self.frame, self.speed)
+        await self._send_msg(player, self.MSG_WORLD, self._world)
+        await self._send_msg(player, self.MSG_TOP_SCORES, self.top_scores)
 
         for p in self._players.values():
             if p.alive:
-                self._send_msg(player, self.MSG_P_JOINED, p.id, p.name, p.color, p.score)
+                await self._send_msg(player, self.MSG_P_JOINED, p.id, p.name, p.color, p.score)
 
         self._players[player.id] = player
 
         return player
 
-    def join(self, player):
+    async def join(self, player):
         if player.alive:
             return
 
         if self.players_alive_count == settings.MAX_PLAYERS:
-            self._send_msg(player, self.MSG_ERROR, "Maximum players reached")
+            await self._send_msg(player, self.MSG_ERROR, "Maximum players reached")
             return
 
         color = self._pick_player_color()
@@ -218,9 +218,9 @@ class Game(Messaging):
         # init snake
         player.new_snake(self.settings, self._world, color)
         # notify all about new player
-        self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
+        await self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
 
-    def game_over(self, player, ch_hit=None, frontal_crash=False, force=False):
+    async def game_over(self, player, ch_hit=None, frontal_crash=False, force=False):
         player.alive = False
         messages = [[self.MSG_P_GAMEOVER, player.id]]
 
@@ -244,10 +244,10 @@ class Game(Messaging):
         else:
             logger.info('%r crashed into the wall', player)
 
-        self._send_msg_all_multi(messages)
+        await self._send_msg_all_multi(messages)
         self._return_player_color(player.color)
         self._calc_top_scores(player)
-        self._send_msg_all(self.MSG_TOP_SCORES, self.top_scores)
+        await self._send_msg_all(self.MSG_TOP_SCORES, self.top_scores)
 
         render = player.snake.render_game_over()
 
@@ -257,39 +257,39 @@ class Game(Messaging):
 
         return render
 
-    def player_disconnected(self, player):
+    async def player_disconnected(self, player):
         logger.info('Removing %r', player)
         player.ws = None
 
         if player.alive:
-            render = self.game_over(player, force=True)
+            render = await self.game_over(player, force=True)
             messages = self._apply_render(render)
-            self._send_msg_all_multi(messages)
+            await self._send_msg_all_multi(messages)
 
         del self._players[player.id]
         del player
 
-    def disconnect_closed(self):
+    async def disconnect_closed(self):
         for player in list(self._players.values()):
             if player.ws.closed or player.ws.close_code:
                 logger.warning('Disconnecting dead %r', player)
-                self.player_disconnected(player)
+                await self.player_disconnected(player)
 
-    def kill_all(self):
+    async def kill_all(self):
         render = []
 
         for player in self._players.values():
             if player.alive:
-                render += self.game_over(player, force=True)
+                render += await self.game_over(player, force=True)
 
         messages = self._apply_render(render)
-        self._send_msg_all_multi(messages)
+        await self._send_msg_all_multi(messages)
 
     async def shutdown(self, code=Messaging.WSCloseCode.GOING_AWAY, message='Server shutdown'):
         for player in list(self._players.values()):
             await self._close(player.ws, code=code, message=message)
 
-    def next_frame(self):
+    async def next_frame(self):
         self.frame += 1
         # This list may change during iteration to change the order of figuring a player's move
         # Sometimes a player's move depends on other player.
@@ -311,7 +311,7 @@ class Game(Messaging):
 
                 # check bounds
                 if self._world.is_invalid_position(next_pos):
-                    render_all += self.game_over(player)
+                    render_all += await self.game_over(player)
                     continue
 
                 cur_ch = self._world[next_pos.y][next_pos.x]
@@ -363,7 +363,7 @@ class Game(Messaging):
                     if ((not other_player_moved and other_player.snake.grow) or
                             (other_player_moved and other_player.snake.grew)):
                         # the tail won't move -> going to die anyway
-                        render_all += self.game_over(player, ch_hit=cur_ch)
+                        render_all += await self.game_over(player, ch_hit=cur_ch)
                         continue
                     elif own_tail_chaser:  # make move (follow tail) + skip old tail rendering
                         logger.debug('%r is chasing his own tail', player)
@@ -374,7 +374,7 @@ class Game(Messaging):
                         continue
 
                 elif cur_ch.char != World.CH_VOID and not tail_chase:
-                    render_all += self.game_over(player, ch_hit=cur_ch)
+                    render_all += await self.game_over(player, ch_hit=cur_ch)
                     continue
 
                 render_all += player.snake.render_move(ignore_tail=own_tail_chaser)
@@ -388,7 +388,7 @@ class Game(Messaging):
 
         # render game over for players that bumped into each other with their heads
         for player in frontal_crashers:
-            render_all += self.game_over(player, frontal_crash=True)
+            render_all += await self.game_over(player, frontal_crash=True)
 
         # render current snake moves -> update world before creating new players
         messages += self._apply_render(render_all.values())
@@ -400,8 +400,8 @@ class Game(Messaging):
                 render_all += new_player.snake.render_new()
             except SnakeError as exc:
                 logger.warning('%r snake cannot be created: %s', new_player, exc)
-                self._send_msg(new_player, self.MSG_ERROR, str(exc))
-                render_all += self.game_over(new_player)
+                await self._send_msg(new_player, self.MSG_ERROR, str(exc))
+                render_all += await self.game_over(new_player)
             else:
                 # and it's birthday present
                 render_all += self.spawn_digit(right_now=True)
@@ -414,4 +414,4 @@ class Game(Messaging):
             messages += self._apply_render(self.spawn_stone())
 
         # send all messages
-        self._send_msg_all_multi(messages)
+        await self._send_msg_all_multi(messages)

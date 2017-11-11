@@ -107,7 +107,7 @@ class RobotPlayer(Messaging):
         while True:
             if self._ws and not self._last_ping:
                 now = time() * 1000
-                self._ws.send_json([Messaging.MSG_PING, now, self.latency], dumps=json.dumps)
+                await self._ws.send_json([Messaging.MSG_PING, now, self.latency], dumps=json.dumps)
                 self._last_ping = now
 
             if self.running:

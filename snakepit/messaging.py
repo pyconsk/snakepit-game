@@ -29,17 +29,17 @@ class Messaging:
     MSG_SYNC = 'sync'
 
     @staticmethod
-    def _send_one(ws, message):
+    async def _send_one(ws, message):
         msg = json.dumps(message)
-        ws.send_str(msg)
+        await ws.send_str(msg)
 
     @staticmethod
-    def _send_all(wss, messages):
+    async def _send_all(wss, messages):
         msg = json.dumps(messages)
 
         for ws in wss:
             if ws:
-                ws.send_str(msg)
+                await ws.send_str(msg)
 
     @staticmethod
     async def _close(ws, code=WSCloseCode.GOING_AWAY, message='Closing connection'):
