@@ -51,7 +51,7 @@ class RobotPlayer(Messaging):
                     self.latency = time() * 1000 - self._last_ping
                     self._last_ping = None
                     logger.info('Current latency: %s ms', round(self.latency, 2))
-            if cmd == self.MSG_SYNC:
+            elif cmd == self.MSG_SYNC:
                 self.frame = args[1]
                 self.speed = args[2]
             elif cmd == self.MSG_RENDER:
