@@ -12,10 +12,26 @@
     var playerId;
     var frameId;
     var speed;
+    var lagMax = 4.0;
+    var lagCount;
+    var artificialDelay;
+    var lastSync;
+    var jitter;
     var latency;
-    var lastLatency = 0;
-    var lastPing = null;
-    var pingPongTimer = null;
+    var lastLatency;
+    var lastPing;
+    var pingPongTimer;
+    var renderQueue;
+
+    function init() {
+        artificialDelay = 0;
+        lastSync = null;
+        lastLatency = 0;
+        lastPing = null;
+        pingPongTimer = null;
+        renderQueue = [];
+        lagCount = 0;
+    }
 
     function getParameterByName(name, url) {
         if (!url) url = window.location.href;
@@ -42,17 +58,38 @@
         }
     }
 
+    // noinspection JSUnusedLocalSymbols
+    function render(x, y, symbol, color) {
+        var cell_id = '#cell' + y + '_' + x;
+        if (symbol === ' ') {
+            symbol = '&nbsp;';
+        }
+        $(cell_id).html(symbol);
+        $(cell_id).attr('class', 'color' + color);
+    }
+
+    function renderAll() {
+        var renderArray = renderQueue.splice(0, renderQueue.length);  // copy and empty renderQueue
+
+        for (var i = 0; i < renderArray.length; i++) {
+            // noinspection JSUnresolvedFunction
+            render.apply(null, renderArray[i]);
+        }
+    }
+
     function openHandler(){
         $('#status').html(
             'connected to server | ' +
             'speed: <span id="speed"></span><span id="speedMax"></span> | ' +
             'frame: <span id="frameId"></span><span id="frameIdMax"></span> | ' +
-            'latency: <span id="latency">?</span> ms'
+            'latency: <span id="latency">?</span> ms | ' +
+            'jitter: <span id="jitter">0</span>'
         );
         playerName = $('#playerName').val();
         frameId = $('#frameId');
         speed = $('#speed');
         latency = $('#latency');
+        jitter = $('#jitter');
 
         sendMessage(["new_player", playerName]);
 
@@ -89,18 +126,34 @@
 
             switch (cmd) {
                 case('render'):
-                    var cell_id = '#cell' + args[2] + '_' + args[1];
-                    var symbol = args[3];
-                    if (symbol === ' ') {
-                        symbol = '&nbsp;';
-                    }
-                    $(cell_id).html(symbol);
-                    $(cell_id).attr('class', 'color' + args[4]);
+                    renderQueue.push(args.slice(1));
                     break;
+
                 case('sync'):
+                    var now = new Date().getTime();
+                    var actualDelay;
+                    var expectedDelay;
+                    var jitterValue = 0;
                     frameId.text(args[1]);
                     speed.text(args[2]);
+
+                    if (lastSync && args[1] > 1) {
+                        actualDelay = now - lastSync;
+                        expectedDelay = 1 / args[2] * 1000;
+                        jitterValue = Math.round(expectedDelay - actualDelay);
+                        if ((actualDelay * lagMax) < expectedDelay) {
+                            console.warn('Detected positive lag on frame %s (%s)', args[1], jitterValue);
+                            lagCount++;
+                        } else if ((actualDelay / lagMax) > expectedDelay) {
+                            console.warn('Detected negative lag on frame %s (%s)', args[1], jitterValue);
+                            lagCount++;
+                        }
+                    }
+
+                    jitter.text(jitterValue);
+                    lastSync = now;
                     break;
+
                 case('pong'):
                     if (lastPing === args[1]) {
                         lastLatency = new Date().getTime() - lastPing;
@@ -108,6 +161,7 @@
                         lastPing = null;
                     }
                     break;
+
                 case('handshake'):
                     $('#username').text(args[1]);
                     playerId = args[2];
@@ -123,15 +177,19 @@
                         $('#frameIdMax').text('/' + gameSettings.GAME_FRAMES_MAX)
                     }
                     break;
+
                 case('world'):
                     initWorld(args[1]);
                     break;
-                case('error'):
-                    alert(args[1]);
-                    break;
+
                 case('reset_world'):
                     resetWorld();
                     break;
+
+                case('error'):
+                    alert(args[1]);
+                    break;
+
                 case('p_joined'):
                     var id = args[1];
                     var name = args[2];
@@ -142,6 +200,7 @@
                         $('#btnJoin').hide();
                     }
                     break;
+
                 case('p_gameover'):
                     id = args[1];
                     $('#player' + id).remove();
@@ -149,11 +208,13 @@
                         $('#btnJoin').show();
                     }
                     break;
+
                 case('p_score'):
                     id = args[1];
                     score = args[2];
                     $('#player' + id + ' .score').text(score);
                     break;
+
                 case('top_scores'):
                     $('#topScoresList').empty();
                     var players = args[1];
@@ -164,10 +225,16 @@
                         addTopScore(color, name, score);
                     }
                     break;
+
                 default:
-                    console.log('Unknown message', args);
+                    console.error('Unknown message "%s"', args);
                     break;
             }
+        }
+
+        // Schedule the render
+        if (renderQueue.length) {
+            setTimeout(renderAll, artificialDelay);
         }
     }
 
@@ -273,6 +340,7 @@
 
     function connect(event) {
         event.preventDefault();
+        init();
 
         var _playerName = $('#playerName').val().trim();
 
@@ -303,7 +371,7 @@
         $('#activePlayersList').empty();
         $('#version').show();
         $(document).unbind('keypress', keyPress);
-        $('#playerName').focus()
+        $('#playerName').focus();
     }
 
     function join(event) {
