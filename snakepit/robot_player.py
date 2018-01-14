@@ -39,7 +39,7 @@ class RobotPlayer(Messaging):
     def __repr__(self):
         return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, self.id, self.name, self.snake.color)
 
-    def _handle_ws_message(self, data):
+    def _handle_ws_message(self, data):  # noqa: R701
         tick = start = stop = False
 
         for args in data:

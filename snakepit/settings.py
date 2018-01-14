@@ -40,7 +40,7 @@ DIGIT_SPAWN_RATE = 6  # probability to spawn per frame in %
 STONE_SPAWN_RATE = 6  # digit spawn is calculated for every snake while stone spawn is calculated once per frame
 
 try:
-    from .local_settings import *
+    from .local_settings import *  # noqa: F401,F403
 except ImportError:
     pass
 

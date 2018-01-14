@@ -1,6 +1,7 @@
 from logging import getLogger
 from random import randint, choice
 from collections import defaultdict
+from uuid import uuid4
 
 from . import settings
 from .world import World
@@ -33,7 +34,6 @@ class Game(Messaging):
     GAME_OVER_TEXT = ">>> GAME OVER <<<"
 
     def __init__(self):
-        self._last_id = 0
         self._colors = []
         self._players = {}
         self._top_scores = self._read_top_scores()
@@ -47,11 +47,12 @@ class Game(Messaging):
         return '<%s [players=%s]>' % (self.__class__.__name__, len(self._players))
 
     async def _send_msg(self, player, *args):
-        await self._send_one(player.ws, [args])
+        for ws in player.wss:
+            await self._send_one(ws, [args])
 
     async def _send_msg_all_multi(self, messages):
         if messages:
-            wss = (player.ws for player in self._players.values())
+            wss = (ws for player in self._players.values() for ws in player.wss)
             await self._send_all(wss, messages)
 
     async def _send_msg_all(self, *args):
@@ -59,6 +60,11 @@ class Game(Messaging):
 
     async def send_error_all(self, msg):
         await self._send_msg_all(self.MSG_ERROR, msg)
+
+    @classmethod
+    async def close_player_connection(cls, player, **kwargs):
+        for ws in player.wss:
+            await cls._close(ws, **kwargs)
 
     @staticmethod
     def _read_top_scores():
@@ -188,9 +194,19 @@ class Game(Messaging):
 
         return None
 
-    async def new_player(self, name, ws):
-        self._last_id += 1
-        player = Player(self._last_id, name, ws)
+    async def new_player(self, name, ws, player_id=None):
+        if player_id:
+            if player_id in self._players:
+                player = self._players[player_id]
+                logger.info('Adding new connection to %r', player)
+                player.add_connection(ws)
+
+                return player
+        else:
+            player_id = str(uuid4())
+
+        player = Player(player_id, name, ws)
+        logger.info('Creating new %r', player)
 
         await self._send_msg(player, self.MSG_HANDSHAKE, player.name, player.id, self.settings)
         await self._send_msg(player, self.MSG_SYNC, self.frame, self.speed)
@@ -259,7 +275,7 @@ class Game(Messaging):
 
     async def player_disconnected(self, player):
         logger.info('Removing %r', player)
-        player.ws = None
+        player.shutdown()
 
         if player.alive:
             render = await self.game_over(player, force=True)
@@ -271,7 +287,7 @@ class Game(Messaging):
 
     async def disconnect_closed(self):
         for player in list(self._players.values()):
-            if player.ws.closed or player.ws.close_code:
+            if player.is_connection_closed():
                 logger.warning('Disconnecting dead %r', player)
                 await self.player_disconnected(player)
 
@@ -287,9 +303,9 @@ class Game(Messaging):
 
     async def shutdown(self, code=Messaging.WSCloseCode.GOING_AWAY, message='Server shutdown'):
         for player in list(self._players.values()):
-            await self._close(player.ws, code=code, message=message)
+            await self.close_player_connection(player, code=code, message=message)
 
-    async def next_frame(self):
+    async def next_frame(self):  # noqa: R701
         self.frame += 1
         # This list may change during iteration to change the order of figuring a player's move
         # Sometimes a player's move depends on other player.

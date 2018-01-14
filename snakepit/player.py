@@ -11,7 +11,7 @@ class Player:
     def __init__(self, player_id, name, ws):
         self.id = player_id
         self.name = name
-        self.ws = ws
+        self.wss = []
         self.score = 0
         self.keymap = {
             37: Snake.LEFT,
@@ -19,9 +19,19 @@ class Player:
             39: Snake.RIGHT,
             40: Snake.DOWN,
         }
+        self.add_connection(ws)
 
     def __repr__(self):
         return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, self.id, self.name, self.color)
+
+    def add_connection(self, ws):
+        self.wss.append(ws)
+
+    def shutdown(self):
+        self.wss.clear()
+
+    def is_connection_closed(self):
+        return any(ws.closed or ws.close_code for ws in self.wss)
 
     def new_snake(self, game_settings, world, color):
         self.snake = Snake(game_settings, world, color)

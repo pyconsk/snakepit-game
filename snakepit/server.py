@@ -49,8 +49,14 @@ async def ws_handler(request):
                 await ws.send_json([Messaging.MSG_PONG] + data[1:], dumps=json.dumps)
             elif data[0] == Messaging.MSG_NEW_PLAYER:
                 if not player:
-                    player = await game.new_player(normalize_player_name(data[1]), ws)
-                    logger.info('Creating new %r', player)
+                    try:
+                        player_id = data[2]
+                    except IndexError:
+                        player_id = None
+
+                    player_name = normalize_player_name(data[1])
+                    player = await game.new_player(player_name, ws, player_id=player_id)
+                    logger.info('Connected %r to the game', player)
             elif data[0] == Messaging.MSG_JOIN:
                 if not game.running:
                     await game.reset_world()

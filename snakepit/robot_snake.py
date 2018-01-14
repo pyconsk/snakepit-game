@@ -25,8 +25,8 @@ class RandomRobotSnake(RobotSnake):
         return random.choice(self.DIRECTIONS + (None,))
 
 
-class WallGrinderRobotSnake(RobotSnake):
-    def next_direction(self, initial=False):
+class WallGrinderRobotSnake(RobotSnake):  # noqa: R701
+    def next_direction(self, initial=False):  # noqa: R701
         world = self.world
         # print(world)  # pretty print the world into the log file
 
@@ -106,8 +106,8 @@ class WallGrinderRobotSnake(RobotSnake):
             return None
 
 
-class TailChasingRobotSnake(RobotSnake):
-    def next_direction(self, initial=False):
+class TailChasingRobotSnake(RobotSnake):  # noqa: R701
+    def next_direction(self, initial=False):  # noqa: R701
         world = self.world
         # print(world)  # pretty print the world into the log file
 

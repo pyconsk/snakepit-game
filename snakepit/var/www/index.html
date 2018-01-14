@@ -10,26 +10,22 @@
     var gameSettings;
     var playerName;
     var playerId;
-    var frameId;
+    var frameId = -1;
     var speed;
     var lagMax = 4.0;
     var lagCount;
-    var artificialDelay;
     var lastSync;
     var jitter;
     var latency;
     var lastLatency;
     var lastPing;
     var pingPongTimer;
-    var renderQueue;
 
     function init() {
-        artificialDelay = 0;
         lastSync = null;
         lastLatency = 0;
         lastPing = null;
         pingPongTimer = null;
-        renderQueue = [];
         lagCount = 0;
     }
 
@@ -68,9 +64,7 @@
         $(cell_id).attr('class', 'color' + color);
     }
 
-    function renderAll() {
-        var renderArray = renderQueue.splice(0, renderQueue.length);  // copy and empty renderQueue
-
+    function renderAll(renderArray) {
         for (var i = 0; i < renderArray.length; i++) {
             // noinspection JSUnresolvedFunction
             render.apply(null, renderArray[i]);
@@ -111,131 +105,144 @@
         $('#status').text("disconnected from server");
     }
 
-    function messageHandler(e){
-        var data = JSON.parse(e.data);
+    function adminMessageHandler(args) {
+        switch (args[0]) {
+            case('pong'):
+                if (lastPing === args[1]) {
+                    lastLatency = new Date().getTime() - lastPing;
+                    latency.text(lastLatency);
+                    lastPing = null;
+                }
+                break;
 
-        if (!(data[0] instanceof Array)) {
-            data = [data];
+            case('handshake'):
+                $('#username').text(args[1]);
+                playerId = args[2];
+                gameSettings = args[3];
+                // noinspection JSUnresolvedVariable
+                if (gameSettings.GAME_SPEED_MAX) {
+                    // noinspection JSUnresolvedVariable
+                    $('#speedMax').text('/' + gameSettings.GAME_SPEED_MAX)
+                }
+                // noinspection JSUnresolvedVariable
+                if (gameSettings.GAME_FRAMES_MAX) {
+                    // noinspection JSUnresolvedVariable
+                    $('#frameIdMax').text('/' + gameSettings.GAME_FRAMES_MAX)
+                }
+                break;
+
+            case('world'):
+                initWorld(args[1]);
+                break;
+
+            case('reset_world'):
+                resetWorld();
+                break;
+
+            case('error'):
+                alert(args[1]);
+                break;
+
+            case('p_joined'):
+                var id = args[1];
+                var name = args[2];
+                var color = args[3];
+                var score = args[4];
+                addPlayer(id, color, name, score);
+                if (id === playerId) {
+                    $('#btnJoin').hide();
+                }
+                break;
+
+            case('p_gameover'):
+                id = args[1];
+                $('#player' + id).remove();
+                if (id === playerId) {
+                    $('#btnJoin').show();
+                }
+                break;
+
+            case('p_score'):
+                id = args[1];
+                score = args[2];
+                $('#player' + id + ' .score').text(score);
+                break;
+
+            case('top_scores'):
+                $('#topScoresList').empty();
+                var players = args[1];
+                for (var n = 0; n < players.length; n++) {
+                    name = players[n][0];
+                    score = players[n][1];
+                    color = players[n][2];
+                    addTopScore(color, name, score);
+                }
+                break;
+
+            default:
+                console.error('Unknown message "%s"', args);
+                break;
         }
+    }
 
-        var i = data.length;
+    function messageHandlerFactory(defaultHandler) {
+        return function(e) {
+            var data = JSON.parse(e.data);
 
-        while (i--) {
-            var args = data[i];
-            var cmd = data[i][0];
-
-            switch (cmd) {
-                case('render'):
-                    renderQueue.push(args.slice(1));
-                    break;
-
-                case('sync'):
-                    var now = new Date().getTime();
-                    var actualDelay;
-                    var expectedDelay;
-                    var jitterValue = 0;
-                    frameId.text(args[1]);
-                    speed.text(args[2]);
-
-                    if (lastSync && args[1] > 1) {
-                        actualDelay = now - lastSync;
-                        expectedDelay = 1 / args[2] * 1000;
-                        jitterValue = Math.round(expectedDelay - actualDelay);
-                        if ((actualDelay * lagMax) < expectedDelay) {
-                            console.warn('Detected positive lag on frame %s (%s)', args[1], jitterValue);
-                            lagCount++;
-                        } else if ((actualDelay / lagMax) > expectedDelay) {
-                            console.warn('Detected negative lag on frame %s (%s)', args[1], jitterValue);
-                            lagCount++;
-                        }
-                    }
-
-                    jitter.text(jitterValue);
-                    lastSync = now;
-                    break;
-
-                case('pong'):
-                    if (lastPing === args[1]) {
-                        lastLatency = new Date().getTime() - lastPing;
-                        latency.text(lastLatency);
-                        lastPing = null;
-                    }
-                    break;
-
-                case('handshake'):
-                    $('#username').text(args[1]);
-                    playerId = args[2];
-                    gameSettings = args[3];
-                    // noinspection JSUnresolvedVariable
-                    if (gameSettings.GAME_SPEED_MAX) {
-                        // noinspection JSUnresolvedVariable
-                        $('#speedMax').text('/' + gameSettings.GAME_SPEED_MAX)
-                    }
-                    // noinspection JSUnresolvedVariable
-                    if (gameSettings.GAME_FRAMES_MAX) {
-                        // noinspection JSUnresolvedVariable
-                        $('#frameIdMax').text('/' + gameSettings.GAME_FRAMES_MAX)
-                    }
-                    break;
-
-                case('world'):
-                    initWorld(args[1]);
-                    break;
-
-                case('reset_world'):
-                    resetWorld();
-                    break;
-
-                case('error'):
-                    alert(args[1]);
-                    break;
-
-                case('p_joined'):
-                    var id = args[1];
-                    var name = args[2];
-                    var color = args[3];
-                    var score = args[4];
-                    addPlayer(id, color, name, score);
-                    if (id === playerId) {
-                        $('#btnJoin').hide();
-                    }
-                    break;
-
-                case('p_gameover'):
-                    id = args[1];
-                    $('#player' + id).remove();
-                    if (id === playerId) {
-                        $('#btnJoin').show();
-                    }
-                    break;
-
-                case('p_score'):
-                    id = args[1];
-                    score = args[2];
-                    $('#player' + id + ' .score').text(score);
-                    break;
-
-                case('top_scores'):
-                    $('#topScoresList').empty();
-                    var players = args[1];
-                    for (var n = 0; n < players.length; n++) {
-                        name = players[n][0];
-                        score = players[n][1];
-                        color = players[n][2];
-                        addTopScore(color, name, score);
-                    }
-                    break;
-
-                default:
-                    console.error('Unknown message "%s"', args);
-                    break;
+            if (!(data[0] instanceof Array)) {
+                data = [data];
             }
-        }
 
-        // Schedule the render
-        if (renderQueue.length) {
-            setTimeout(renderAll, artificialDelay);
-        }
+            var i = data.length;
+            var renderArray = [];
+
+            while (i--) {
+                var args = data[i];
+
+                switch (args[0]) {
+                    case('render'):
+                        renderArray.push(args.slice(1));
+                        break;
+
+                    case('sync'):
+                        if (args[1] <= frameId) {
+                            return;  // We already rendered this frame
+                        }
+
+                        var now = new Date().getTime();
+                        var actualDelay;
+                        var expectedDelay;
+                        var jitterValue = 0;
+                        frameId.text(args[1]);
+                        speed.text(args[2]);
+
+                        if (lastSync && args[1] > 1) {
+                            actualDelay = now - lastSync;
+                            expectedDelay = 1 / args[2] * 1000;
+                            jitterValue = Math.round(expectedDelay - actualDelay);
+                            if ((actualDelay * lagMax) < expectedDelay) {
+                                console.warn('Detected positive lag on frame %s (%s)', args[1], jitterValue);
+                                lagCount++;
+                            } else if ((actualDelay / lagMax) > expectedDelay) {
+                                console.warn('Detected negative lag on frame %s (%s)', args[1], jitterValue);
+                                lagCount++;
+                            }
+                        }
+
+                        jitter.text(jitterValue);
+                        lastSync = now;
+                        break;
+
+                    default:
+                        defaultHandler(args);
+                        break;
+                }
+            }
+
+            if (renderArray.length) {
+                renderAll(renderArray);
+            }
+        };
     }
 
     function initWorld(data) {
@@ -350,9 +357,12 @@
 
         $('#status').text("connecting...");
         var url = location.pathname.substring(0, location.pathname.indexOf('/index.html')) + '/connect';
-        ws = new WebSocket(((location.protocol === 'https:') ? 'wss://' : 'ws://') + location.host + url);
+        var ws_url = ((location.protocol === 'https:') ? 'wss://' : 'ws://') + location.host + url;
+
+        // Primary websocket connection
+        ws = new WebSocket(ws_url);
         ws.onopen = openHandler;
-        ws.onmessage = messageHandler;
+        ws.onmessage = messageHandlerFactory(adminMessageHandler);
         ws.onclose = closeHandler;
         ws.onerror = function(e) {
             $('#status').text(e.toString());
@@ -403,7 +413,7 @@
 </head>
 <body>
 <h1 id="title">Snakepit</h1>
-<h3 id="version">ver 0.15</h3>
+<h3 id="version">ver 0.95</h3>
 
 <div>
     <div id="mainScreen">
@@ -415,7 +425,7 @@
 
         <div id="description">
             <p><b class="white">Snakepit</b> is an open-source multiplayer snake game.</p>
-            <p>It is designed as a demo of <a href="https://docs.python.org/3/library/asyncio.html">asyncio</a> library for Python 3.5.</p>
+            <p>It was designed as a demo of <a href="https://docs.python.org/3/library/asyncio.html">asyncio</a> library for Python 3.5.</p>
             <p>Check out the source code at our <a href="https://github.com/pyconsk/snakepit-game">github repo</a>.</p>
 
             <div id="rules">
