@@ -6,7 +6,7 @@
   <link rel="stylesheet" type="text/css" href="static/css/style.css" />
   <script type="text/javascript" src="static/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript">
-    var SECONDARY_WEBSOCKET_CONNECTION = true;
+    var SECONDARY_WEBSOCKET_CONNECTION = false;
     var wsURL;
     var ws;
     var ws2;
@@ -228,7 +228,7 @@
 
                     case('sync'):
                         if (args[1] <= lastFrame) {
-                            console.debug('Ignoring sync %s on %s connection', args[1], connection);
+                            // console.debug('Ignoring sync %s on %s connection', args[1], connection);
                             return;  // We already rendered this frame
                         }
 
@@ -294,6 +294,8 @@
     }
 
     function resetWorld() {
+        lastFrame = 0;
+        frameId.text(lastFrame);
         // noinspection JSJQueryEfficiency
         $('#world td').html('&nbsp;');
     }
