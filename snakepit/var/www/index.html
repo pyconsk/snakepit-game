@@ -6,7 +6,10 @@
   <link rel="stylesheet" type="text/css" href="static/css/style.css" />
   <script type="text/javascript" src="static/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript">
+    var SECONDARY_WEBSOCKET_CONNECTION = true;
+    var wsURL;
     var ws;
+    var ws2;
     var gameSettings;
     var playerName;
     var playerId;
@@ -43,6 +46,11 @@
     function sendMessage(msgArray) {
         var msg = JSON.stringify(msgArray);
         ws.send(msg);
+    }
+
+    function sendMessage2(msgArray) {
+        var msg = JSON.stringify(msgArray);
+        ws2.send(msg);
     }
 
     function pingPong() {
@@ -86,7 +94,7 @@
         latency = $('#latency');
         jitter = $('#jitter');
 
-        sendMessage(["new_player", playerName]);
+        sendMessage(["new_player", playerName, null]);
 
         $('#mainScreen').hide();
         $('#version').hide();
@@ -96,6 +104,14 @@
         $(document).bind('keydown', keyPress);
 
         pingPongTimer = setInterval(pingPong, 1000)
+    }
+
+    function openHandler2(){  // Used by the secondary websocket connection
+        if (playerId) {
+            sendMessage2(["new_player", playerName, playerId]);
+        } else {
+            console.error('Cannot create secondary websocket connection without player ID');
+        }
     }
 
     function closeHandler(){
@@ -152,6 +168,10 @@
                 addPlayer(id, color, name, score);
                 if (id === playerId) {
                     $('#btnJoin').hide();
+
+                    if (SECONDARY_WEBSOCKET_CONNECTION) {
+                        connect2();
+                    }
                 }
                 break;
 
@@ -186,7 +206,7 @@
         }
     }
 
-    function messageHandlerFactory(defaultHandler) {
+    function messageHandlerFactory(connection, defaultHandler) {
         return function(e) {
             var data = JSON.parse(e.data);
 
@@ -196,6 +216,7 @@
 
             var i = data.length;
             var renderArray = [];
+            // console.debug('Got message on %s connection: %s', connection, data);
 
             while (i--) {
                 var args = data[i];
@@ -207,6 +228,7 @@
 
                     case('sync'):
                         if (args[1] <= lastFrame) {
+                            console.debug('Ignoring sync %s on %s connection', args[1], connection);
                             return;  // We already rendered this frame
                         }
 
@@ -359,12 +381,12 @@
 
         $('#status').text("connecting...");
         var url = location.pathname.substring(0, location.pathname.indexOf('/index.html')) + '/connect';
-        var ws_url = ((location.protocol === 'https:') ? 'wss://' : 'ws://') + location.host + url;
+        wsURL = ((location.protocol === 'https:') ? 'wss://' : 'ws://') + location.host + url;
 
         // Primary websocket connection
-        ws = new WebSocket(ws_url);
+        ws = new WebSocket(wsURL);
         ws.onopen = openHandler;
-        ws.onmessage = messageHandlerFactory(adminMessageHandler);
+        ws.onmessage = messageHandlerFactory('primary websocket', adminMessageHandler);
         ws.onclose = closeHandler;
         ws.onerror = function(e) {
             $('#status').text(e.toString());
@@ -378,12 +400,30 @@
             ws.close();
         }
 
+        disconnect2();
+
         $('#playScreen').hide();
         $('#mainScreen').show();
         $('#activePlayersList').empty();
         $('#version').show();
         $(document).unbind('keypress', keyPress);
         $('#playerName').focus();
+    }
+
+    function connect2() {
+        // Secondary websocket connection (only for sync and render events)
+        ws2 = new WebSocket(wsURL);
+        ws2.onopen = openHandler2;
+        ws2.onmessage = messageHandlerFactory('secondary websocket', $.noop);
+        ws2.onerror = function(e) {
+            $('#status').text(e.toString());
+        };
+    }
+
+    function disconnect2() {
+        if (ws2) {
+            ws2.close();
+        }
     }
 
     function join(event) {
