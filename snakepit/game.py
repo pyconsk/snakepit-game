@@ -282,7 +282,7 @@ class Game(Messaging):
             messages = self._apply_render(render)
             await self._send_msg_all_multi(messages)
 
-        del self._players[player.id]
+        self._players.pop(player.id, None)
         del player
 
     async def disconnect_closed(self):

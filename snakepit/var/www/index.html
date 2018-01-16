@@ -10,10 +10,11 @@
     var gameSettings;
     var playerName;
     var playerId;
-    var frameId = -1;
+    var frameId;
     var speed;
     var lagMax = 4.0;
     var lagCount;
+    var lastFrame = -1;
     var lastSync;
     var jitter;
     var latency;
@@ -205,10 +206,11 @@
                         break;
 
                     case('sync'):
-                        if (args[1] <= frameId) {
+                        if (args[1] <= lastFrame) {
                             return;  // We already rendered this frame
                         }
 
+                        lastFrame = args[1];
                         var now = new Date().getTime();
                         var actualDelay;
                         var expectedDelay;
