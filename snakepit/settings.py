@@ -2,7 +2,7 @@ import os
 import logging
 
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-WEB_ROOT = os.path.join(PROJECT_DIR, 'var', 'www')
+WEB_ROOT = os.path.join(PROJECT_DIR, 'html')
 TOP_SCORES_FILE = os.path.join(PROJECT_DIR, 'var', 'run', 'top_scores.txt')
 
 DEBUG = False
