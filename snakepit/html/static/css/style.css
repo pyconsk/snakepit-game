@@ -128,6 +128,7 @@ ol li {
 
 /*noinspection CssUnusedSymbol*/
 .orange { color: #FF851B; }
+
 .red { color: #FF4136; }
 
 /*noinspection CssUnusedSymbol*/
@@ -138,6 +139,7 @@ ol li {
 
 /*noinspection CssUnusedSymbol*/
 .maroon { color: #85144B; }
+
 .white { color: #FFFFFF; }
 
 /*noinspection CssUnusedSymbol*/
@@ -149,25 +151,22 @@ ol li {
 /*noinspection CssUnusedSymbol*/
 .black { color: #111111; }
 
-.white {
-    color: #FFFFFF;
-}
-
-.red {
-    color: #FF4136;
-}
-
 #rules {
     margin-top: 5em;
 }
 
 #status {
-    outline: 1px solid cyan;
     position: fixed;
     bottom: 1px;
     left: 1px;
     padding: 2px 6px;
-    font-size: 0.9em;
+    font-size: 0.85em;
+    width: 100%;
+}
+
+#status > span {
+    display: inline-block;
+    min-width: 2em;
 }
 
 #userButtons {
@@ -241,4 +240,5 @@ ol li {
     font-size: 1em;
     letter-spacing: 0;
     font-kerning: none;
+    background-color: black;
 }

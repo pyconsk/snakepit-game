@@ -1,9 +1,5 @@
-from .exceptions import ImproperlyConfigured
+from .exceptions import ImproperlyConfigured, ValidationError
 from .game import Game
-
-
-def normalize_player_name(value):
-    return value.strip()[:15]
 
 
 def get_client_address(request):
@@ -29,3 +25,30 @@ def validate_settings(settings):
 
     if settings.FIELD_SIZE_Y / 2 < distance:
         raise ImproperlyConfigured('Invalid FIELD_SIZE_Y, INIT_LENGTH or INIT_MIN_DISTANCE_BORDER')
+
+
+def validate_string(value, min_length=None, max_length=None):
+    try:
+        value = str(value)
+    except ValueError:
+        raise ValidationError('Not a string.')
+
+    if ((min_length is not None and len(value) < min_length) or
+            (max_length is not None and len(value) > max_length)):
+        raise ValidationError('Invalid value.')
+
+    return value
+
+
+def validate_player_name(value):
+    try:
+        return validate_string(str(value).strip(), min_length=1, max_length=15)
+    except ValueError:
+        raise ValidationError('Invalid player name.')
+
+
+def validate_player_id(value):
+    try:
+        return validate_string(value, min_length=1, max_length=36)
+    except ValueError:
+        raise ValidationError('Invalid player ID.')

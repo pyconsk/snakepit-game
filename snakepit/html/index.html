@@ -137,6 +137,9 @@
                 playerId = args[2];
                 gameSettings = args[3];
                 // noinspection JSUnresolvedVariable
+                $('#servername').text(gameSettings.SERVER_NAME || '');
+
+                // noinspection JSUnresolvedVariable
                 if (gameSettings.GAME_SPEED_MAX) {
                     // noinspection JSUnresolvedVariable
                     $('#speedMax').text('/' + gameSettings.GAME_SPEED_MAX)
@@ -165,7 +168,9 @@
                 var name = args[2];
                 var color = args[3];
                 var score = args[4];
+
                 addPlayer(id, color, name, score);
+
                 if (id === playerId) {
                     $('#btnJoin').hide();
 
@@ -192,6 +197,7 @@
             case('top_scores'):
                 $('#topScoresList').empty();
                 var players = args[1];
+
                 for (var n = 0; n < players.length; n++) {
                     name = players[n][0];
                     score = players[n][1];
@@ -238,7 +244,7 @@
                         var expectedDelay;
                         var jitterValue = 0;
                         frameId.text(args[1]);
-                        speed.text(args[2]);
+                        speed.text(parseFloat(args[2]).toFixed(6));
 
                         if (lastSync && args[1] > 1) {
                             actualDelay = now - lastSync;
@@ -489,7 +495,7 @@
 
     <div id="playScreen">
         <div id="userForm">
-            Welcome to the server, <span id="username" class="white"></span>!
+            You are connected to server <span id="servername" class="white"></span> as user <span id="username" class="white"></span>.
         </div>
         <div id="userButtons">
             <button id="btnJoin">Join!</button>

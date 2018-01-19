@@ -13,10 +13,32 @@ from aiohttp import web
 
 from . import settings
 from .game import Game
-from .utils import normalize_player_name, get_client_address, validate_settings
+from .utils import get_client_address, validate_settings, validate_player_name, validate_player_id
 from .messaging import json, Messaging
+from .exceptions import ValidationError
 
 logger = getLogger(__name__)
+
+
+def _get_new_player_info(data):
+    try:
+        player_name = data[1]
+    except IndexError:
+        raise ValidationError('Missing player name.')
+    else:
+        player_name = validate_player_name(player_name)
+
+    try:
+        player_id = data[2]
+    except IndexError:
+        player_id = None
+    else:
+        if player_id:
+            player_id = validate_player_id(player_id)
+        else:
+            player_id = None
+
+    return player_name, player_id
 
 
 async def ws_handler(request):
@@ -27,7 +49,6 @@ async def ws_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    # noinspection PyTypeChecker
     async for msg in ws:
         if msg.tp == web.MsgType.TEXT:
             logger.debug('Got message from %s: %s', client_address, msg.data)
@@ -38,6 +59,7 @@ async def ws_handler(request):
                 logger.error('Invalid JSON data from %s: %s', client_address, msg.data)
                 continue
 
+            # noinspection PyUnresolvedReferences
             if isinstance(data, int) and player:
                 # Interpret as key code
                 player.keypress(data)
@@ -50,13 +72,15 @@ async def ws_handler(request):
             elif data[0] == Messaging.MSG_NEW_PLAYER:
                 if not player:
                     try:
-                        player_id = data[2]
-                    except IndexError:
-                        player_id = None
-
-                    player_name = normalize_player_name(data[1])
-                    player = await game.new_player(player_name, ws, player_id=player_id)
-                    logger.info('Connected %r to the game', player)
+                        # noinspection PyTypeChecker
+                        player_name, player_id = _get_new_player_info(data)
+                    except ValidationError as exc:
+                        logger.error('Invalid new player request: %r', exc)
+                        await ws.send_json([Messaging.MSG_ERROR, str(exc)])
+                        break
+                    else:
+                        player = await game.new_player(player_name, ws, player_id=player_id)
+                        logger.info('Connected %r to the game', player)
             elif data[0] == Messaging.MSG_JOIN:
                 if not game.running:
                     await game.reset_world()

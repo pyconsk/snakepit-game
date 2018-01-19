@@ -14,6 +14,7 @@ from .exceptions import SnakeError
 logger = getLogger(__name__)
 
 GAME_SETTINGS = (
+    'SERVER_NAME',
     'GAME_SPEED',
     'GAME_SPEED_INCREASE',
     'GAME_SPEED_INCREASE_RATE',

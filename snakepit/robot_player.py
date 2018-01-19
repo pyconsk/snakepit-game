@@ -13,7 +13,7 @@ logger = getLogger(__name__)
 
 
 class RobotPlayer(Messaging):
-    def __init__(self, name, snake_class=RobotSnake, url='http://localhost:8000/connect'):
+    def __init__(self, name, player_id=None, snake_class=RobotSnake, url='http://localhost:8000/connect'):
         self._first_render_sent = False
         self._last_ping = None
         self._ws = None
@@ -24,7 +24,7 @@ class RobotPlayer(Messaging):
         self.running = False
         self.name = name
         self.url = url
-        self.id = None
+        self.id = player_id
         self.world = World()
         self.players = {}
         self.top_scores = []
@@ -81,7 +81,7 @@ class RobotPlayer(Messaging):
                     self.snake.color = args[3]
             elif cmd == self.MSG_P_GAMEOVER:
                 player_id = args[1]
-                logger.info('Game over for player: %s' % self.players.pop(player_id, None))
+                logger.info('Game over for player: %s', self.players.pop(player_id, None))
 
                 if player_id == self.id:
                     stop = True
@@ -121,7 +121,7 @@ class RobotPlayer(Messaging):
     async def ws_session(self):
         async with ClientSession() as session:
             async with session.ws_connect(self.url) as ws:
-                await ws.send_json([self.MSG_NEW_PLAYER, self.name], dumps=json.dumps)
+                await ws.send_json([self.MSG_NEW_PLAYER, self.name, self.id], dumps=json.dumps)
                 await ws.send_json([self.MSG_JOIN], dumps=json.dumps)
                 self._ws = ws
 

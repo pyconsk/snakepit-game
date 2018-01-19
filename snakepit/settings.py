@@ -11,7 +11,9 @@ DEBUG = False
 LOG_FORMAT = '%(asctime)s %(levelname)-8s %(name)s: %(message)s'
 LOG_LEVEL = logging.INFO
 
-# Snake-pit settings
+# Snakepit settings
+SERVER_NAME = 'Snakepit1'
+
 GAME_SPEED = 6.0  # fps, the more the faster
 GAME_SPEED_INCREASE = None  # frame number after which the game should get faster (see GAME_SPEED_INCREASE_RATE)
 GAME_SPEED_INCREASE_RATE = 0.001  # apply this factor to current game speed during each frame

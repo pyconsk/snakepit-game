@@ -8,3 +8,7 @@ class SnakeError(Exception):
 
 class SnakePlacementError(SnakeError):
     pass
+
+
+class ValidationError(ValueError):
+    pass
