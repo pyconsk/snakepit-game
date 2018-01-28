@@ -34,6 +34,9 @@ class World(list):
     def load(self, data):
         self[:] = data
 
+    def update(self, draw):
+        self[draw.y][draw.x] = Char(draw.char, draw.color)
+
     @classmethod
     def is_invalid_position(cls, pos):
         return pos.x < 0 or pos.x >= cls.SIZE_X or pos.y < 0 or pos.y >= cls.SIZE_Y
