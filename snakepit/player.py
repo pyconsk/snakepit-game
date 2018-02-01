@@ -22,7 +22,7 @@ class Player:
         self.add_connection(ws)
 
     def __repr__(self):
-        return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, self.id, self.name, self.color)
+        return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, str(self.id)[:8], self.name, self.color)
 
     def add_connection(self, ws):
         self.wss.append(ws)

@@ -15,9 +15,11 @@ bin/run.py
 ```
 
 
-## PyCon SK Contest
+## PyCon SK Programming Contest
 
-Added support for robot snakes.
+Refactored code and added support for robot snakes:
+
+    bin/run_robot.py --help
 
 
 ## Original Snakepit

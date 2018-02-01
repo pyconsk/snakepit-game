@@ -47,6 +47,11 @@ input {
   text-align: left;
 }
 
+input[type="text"]:disabled, input[type="text"].disabled {
+  background-color: #404040;
+  cursor: not-allowed;
+}
+
 button {
   border: 0;
   text-align: center;

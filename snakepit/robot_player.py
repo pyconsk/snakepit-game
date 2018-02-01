@@ -4,6 +4,7 @@ from time import time
 from logging import getLogger
 from aiohttp import ClientSession, WSMsgType
 
+from . import settings
 from .world import World
 from .datatypes import Char
 from .messaging import json, Messaging
@@ -11,9 +12,11 @@ from .robot_snake import RobotSnake
 
 logger = getLogger(__name__)
 
+DEFAULT_SERVER_URL = 'http://localhost:%d/connect' % settings.SERVER_PORT
+
 
 class RobotPlayer(Messaging):
-    def __init__(self, name, player_id=None, snake_class=RobotSnake, url='http://localhost:8000/connect'):
+    def __init__(self, name, player_id=None, snake_class=RobotSnake, server_url=DEFAULT_SERVER_URL):
         self._first_render_sent = False
         self._last_ping = None
         self._ws = None
@@ -23,7 +26,7 @@ class RobotPlayer(Messaging):
         self.loop = None
         self.running = False
         self.name = name
-        self.url = url
+        self.server_url = server_url
         self.id = player_id
         self.world = World()
         self.players = {}
@@ -37,7 +40,8 @@ class RobotPlayer(Messaging):
         }
 
     def __repr__(self):
-        return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, self.id, self.name, self.snake.color)
+        return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, str(self.id)[:8], self.name,
+                                                      self.snake.color)
 
     def _handle_ws_message(self, data):  # noqa: R701
         tick = start = stop = False
@@ -120,7 +124,7 @@ class RobotPlayer(Messaging):
 
     async def ws_session(self):
         async with ClientSession() as session:
-            async with session.ws_connect(self.url) as ws:
+            async with session.ws_connect(self.server_url) as ws:
                 await ws.send_json([self.MSG_NEW_PLAYER, self.name, self.id], dumps=json.dumps)
                 await ws.send_json([self.MSG_JOIN], dumps=json.dumps)
                 self._ws = ws

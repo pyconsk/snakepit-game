@@ -7,6 +7,9 @@
   <link rel="stylesheet" type="text/css" href="static/css/style.css"/>
   <script type="text/javascript" src="static/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript">
+      // Tell the parent that we are up and running (useful when called from an iframe)
+      window.parent.postMessage('1', document.referrer);
+
       var SECONDARY_WEBSOCKET_CONNECTION = false;
       var wsURL;
       var ws;
@@ -464,7 +467,7 @@
               }
           });
           if (auto_connect) {
-              $('#playerName').val(auto_connect);
+              $('#playerName').val(auto_connect).attr('disabled','disabled');
               $('#btnConnect').click();
           }
       });

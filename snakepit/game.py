@@ -13,23 +13,6 @@ from .exceptions import SnakeError
 
 logger = getLogger(__name__)
 
-GAME_SETTINGS = (
-    'SERVER_NAME',
-    'GAME_SPEED',
-    'GAME_SPEED_INCREASE',
-    'GAME_SPEED_INCREASE_RATE',
-    'GAME_SPEED_MAX',
-    'GAME_FRAMES_MAX',
-    'MAX_PLAYERS',
-    'FIELD_SIZE_X',
-    'FIELD_SIZE_Y',
-    'KILL_POINTS',
-    'INIT_LENGTH',
-    'DIGIT_MIN',
-    'DIGIT_MAX',
-    'STONES_ENABLED',
-)
-
 
 class Game(Messaging):
     GAME_OVER_TEXT = ">>> GAME OVER <<<"
@@ -42,7 +25,7 @@ class Game(Messaging):
         self.frame = 0
         self.running = False
         self.speed = settings.GAME_SPEED
-        self.settings = {attr: getattr(settings, attr) for attr in GAME_SETTINGS}
+        self.settings = {attr: getattr(settings, attr) for attr, _ in settings.SNAKEPIT_SETTINGS}
 
     def __repr__(self):
         return '<%s [players=%s]>' % (self.__class__.__name__, len(self._players))

@@ -85,7 +85,11 @@ async def ws_handler(request):
                 if not game.running:
                     await game.reset_world()
                     logger.info('Starting game loop by %r', player)
-                    asyncio.ensure_future(game_loop(game))
+
+                    try:
+                        asyncio.ensure_future(game_loop(game))
+                    except asyncio.CancelledError:
+                        pass
 
                 await game.join(player)
 
@@ -103,6 +107,7 @@ async def ws_handler(request):
 
 
 async def game_loop(game):
+    server_shutdown = False
     game.running = True
     game_sleep = 1.0 / game.speed
     game_speed_max = settings.GAME_SPEED_MAX
@@ -122,6 +127,11 @@ async def game_loop(game):
                 logger.info('Maximum frames reached - killing all players')
                 await game.kill_all()
 
+                if settings.GAME_SHUTDOWN_ON_FRAMES_MAX:
+                    await game.shutdown(message='Server shutdown because frames limit reached')
+                    server_shutdown = True
+                    break
+
             if (game_speed_increase and game_speed_increase <= game.frame and
                     (not game_speed_max or game.speed < game_speed_max)):
                 game.speed = round(game.speed + game.speed * game_speed_increase_rate, 6)
@@ -136,6 +146,11 @@ async def game_loop(game):
     finally:
         game.running = False
 
+    if server_shutdown:
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGTERM)
+
 
 async def on_shutdown(app):
     logger.warning('Server shutdown')
@@ -145,7 +160,7 @@ async def on_shutdown(app):
         await game.shutdown()
 
 
-def run(host=None, port=8000, debug=settings.DEBUG):
+def run(host=settings.SERVER_HOST, port=settings.SERVER_PORT, debug=settings.DEBUG):
     validate_settings(settings)
 
     app = web.Application(debug=debug)
@@ -156,4 +171,6 @@ def run(host=None, port=8000, debug=settings.DEBUG):
 
     app.on_shutdown.append(on_shutdown)
 
+    from time import sleep
+    sleep(5)
     web.run_app(app, host=host, port=port)
