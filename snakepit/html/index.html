@@ -8,7 +8,7 @@
   <script type="text/javascript" src="static/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript">
       // Tell the parent that we are up and running (useful when called from an iframe)
-      window.parent.postMessage('1', document.referrer);
+      try { window.parent.postMessage('1', document.referrer); } catch(e) {}
 
       var SECONDARY_WEBSOCKET_CONNECTION = false;
       var wsURL;
