@@ -171,6 +171,4 @@ def run(host=settings.SERVER_HOST, port=settings.SERVER_PORT, debug=settings.DEB
 
     app.on_shutdown.append(on_shutdown)
 
-    from time import sleep
-    sleep(5)
     web.run_app(app, host=host, port=port)
