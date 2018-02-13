@@ -38,7 +38,7 @@ class Messaging:
         msg = json.dumps(messages)
 
         for ws in wss:
-            if ws:
+            if not ws.closed:
                 await ws.send_str(msg)
 
     @staticmethod

@@ -9,7 +9,7 @@ else:
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 from logging import getLogger
-from aiohttp import web
+from aiohttp import web, WSMsgType
 
 from . import settings
 from .game import Game
@@ -50,7 +50,7 @@ async def ws_handler(request):
     await ws.prepare(request)
 
     async for msg in ws:
-        if msg.tp == web.MsgType.TEXT:
+        if msg.type == WSMsgType.TEXT:
             logger.debug('Got message from %s: %s', client_address, msg.data)
 
             try:
@@ -93,7 +93,7 @@ async def ws_handler(request):
 
                 await game.join(player)
 
-        elif msg.tp == web.MsgType.CLOSE:
+        elif msg.type == WSMsgType.CLOSE:
             break
         else:
             logger.warning('Unknown message type from %s: %s', client_address, msg.type)
