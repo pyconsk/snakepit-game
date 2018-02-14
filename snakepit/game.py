@@ -291,6 +291,7 @@ class Game(Messaging):
 
     async def next_frame(self):  # noqa: R701
         self.frame += 1
+        logger.debug('Rendering frame %d', self.frame)
         # This list may change during iteration to change the order of figuring a player's move
         # Sometimes a player's move depends on other player.
         players = list(self._players.values())
@@ -372,6 +373,13 @@ class Game(Messaging):
                             raise RuntimeError('infinite loop')
                         players.append(player)
                         continue
+
+                elif cur_ch.char == Snake.CH_HEAD:
+                    other_player = self.get_player_by_color(cur_ch.color)
+                    frontal_crashers.add(player)
+                    frontal_crashers.add(other_player)
+                    logger.debug('%r is frontally crashing into %r', player, other_player)
+                    continue
 
                 elif cur_ch.char != World.CH_VOID and not tail_chase:
                     render_all += await self.game_over(player, ch_hit=cur_ch)
