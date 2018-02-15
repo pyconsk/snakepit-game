@@ -67,7 +67,6 @@ async def ws_handler(request):
                 logger.error('Invalid data from %s: %s', client_address, data)
                 continue
             elif data[0] == Messaging.MSG_PING:
-                logger.debug('Received ping from %s (%s)', client_address, data[1:])
                 await ws.send_json([Messaging.MSG_PONG] + data[1:], dumps=json.dumps)
             elif data[0] == Messaging.MSG_NEW_PLAYER:
                 if not player:

@@ -18,8 +18,8 @@ class BaseSnake:
     BODY_CHARS = frozenset([CH_HEAD, CH_BODY, CH_TAIL])
 
     CH_DEAD_HEAD = 'x'
-    CH_DEAD_BODY = '*'
-    CH_DEAD_TAIL = '+'
+    CH_DEAD_BODY = '+'
+    CH_DEAD_TAIL = '%'
     DEAD_BODY_CHARS = frozenset([CH_DEAD_HEAD, CH_DEAD_BODY, CH_DEAD_TAIL])
 
     UP = Vector(0, -1)

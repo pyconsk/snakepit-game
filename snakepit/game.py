@@ -1,6 +1,6 @@
 from logging import getLogger
 from random import randint, choice
-from collections import defaultdict
+from collections import OrderedDict
 from uuid import uuid4
 
 from . import settings
@@ -19,7 +19,7 @@ class Game(Messaging):
 
     def __init__(self):
         self._colors = []
-        self._players = {}
+        self._players = OrderedDict()
         self._top_scores = self._read_top_scores()
         self._world = World()
         self.frame = 0
@@ -221,6 +221,7 @@ class Game(Messaging):
         await self._send_msg_all(self.MSG_P_JOINED, player.id, player.name, player.color, player.score)
 
     async def game_over(self, player, ch_hit=None, frontal_crash=False, force=False):
+        logger.debug('=> Game over for %r', player)
         player.alive = False
         messages = [[self.MSG_P_GAMEOVER, player.id]]
 
@@ -233,12 +234,18 @@ class Game(Messaging):
             if killer:
                 if killer == player:
                     logger.info('%r committed suicide', player)
-                else:
+                elif killer.alive:
                     logger.info('%r was killed by %r', player, killer)
                     killer.score += settings.KILL_POINTS
                     messages.append([self.MSG_P_SCORE, killer.id, killer.score])
+                else:
+                    logger.info('%r crashed into a dying snake', player)
             else:
                 logger.info('%r crashed into a snake', player)
+        elif ch_hit and ch_hit.char in Snake.DEAD_BODY_CHARS:
+            logger.info('%r crashed into a dead snake', player)
+        elif ch_hit and ch_hit.char == World.CH_STONE:
+            logger.info('%r crashed into a stone', player)
         elif force:
             logger.info('%r death caused by force majeure', player)
         else:
@@ -299,11 +306,13 @@ class Game(Messaging):
         render_all = Render()
         new_players = []
         frontal_crashers = set()
-        moves = defaultdict(int)
+        moves = {}
 
         for player in players:
             if not player.alive:
                 continue
+
+            logger.debug('=> Rendering player %r', player)
 
             # check if snake already exists
             if player.snake and len(player.snake.body):
@@ -318,30 +327,39 @@ class Game(Messaging):
                 cur_ch = self._world[next_pos.y][next_pos.x]
                 next_ch = render_all.get(next_pos, None)
                 grow = 0
+                snake_crash = False  # hitting other living snake
                 tail_chase = False  # targeting a new void char
                 tail_crash = False  # hitting a tail for sure
                 own_tail_chaser = False
+                first_player_loop = player.id not in moves
+
+                if first_player_loop:
+                    moves[player.id] = 0
 
                 # special cases
-                if next_ch:  # check already rendered chars
+                if next_ch:  # check char already rendered in this frame
                     if next_ch.char in Snake.DEAD_BODY_CHARS:
-                        logger.debug('%r is going to hit a dying snake', player)
-                    elif next_ch.char == Snake.CH_HEAD and (cur_ch.char == World.CH_VOID or cur_ch.isdigit()):
+                        logger.debug('=> %r is going to hit a dying snake', player)
+                    elif next_ch.char == Snake.CH_HEAD and (cur_ch.char == World.CH_VOID or cur_ch.char.isdigit()):
                         other_player = self.get_player_by_color(next_ch.color)
+                        assert other_player
                         frontal_crashers.add(player)
                         frontal_crashers.add(other_player)
-                        logger.debug('%r is going to frontally crash into %r', player, other_player)
+                        logger.debug('=> %r is going to frontally crash into %r', player, other_player)
                     elif next_ch.char == Snake.CH_TAIL and cur_ch.char == Snake.CH_TAIL:
                         tail_crash = True
-                        logger.debug('%r is going to hit %r snake\'s tail',
+                        logger.debug('=> %r is going to hit %r snake\'s tail',
                                      player, self.get_player_by_color(cur_ch.color))
                     elif next_ch.char == World.CH_VOID and cur_ch.char == Snake.CH_TAIL:
                         tail_chase = True
-                        logger.debug('%r is chasing %r\'s tail', player, self.get_player_by_color(cur_ch.color))
+                        logger.debug('=> %r is chasing %r\'s tail',
+                                     player, self.get_player_by_color(cur_ch.color))
                     elif next_ch.char in Snake.BODY_CHARS:
-                        logger.debug('%r is going to hit %r\'s snake', player, self.get_player_by_color(cur_ch.color))
+                        snake_crash = True
+                        logger.debug('=> %r is going to hit %r\'s snake',
+                                     player, self.get_player_by_color(cur_ch.color))
                     else:
-                        logger.warning('Unexpected situation in the world ("%s") while rendering %r move',
+                        logger.warning('=> Unexpected situation in the world ("%s") while rendering %r move',
                                        next_ch, player)
 
                 # next move
@@ -349,7 +367,7 @@ class Game(Messaging):
                     # start growing next turn in case we eaten a digit
                     grow = int(cur_ch.char)
                     player.score += grow
-                    logger.debug('%r ate the number "%s"', player, grow)
+                    logger.debug('=> %r ate the number "%s"', player, grow)
                     messages.append([self.MSG_P_SCORE, player.id, player.score])
 
                 elif cur_ch.char == Snake.CH_TAIL and not tail_crash:  # special case: hitting someone's tail
@@ -359,7 +377,8 @@ class Game(Messaging):
                         other_player_moved = False
                     else:
                         other_player = self.get_player_by_color(cur_ch.color)
-                        other_player_moved = moves.get(other_player.id, False)
+                        assert other_player
+                        other_player_moved = bool(moves.get(other_player.id, False))
 
                     if ((not other_player_moved and other_player.snake.grow) or
                             (other_player_moved and other_player.snake.grew)):
@@ -367,30 +386,39 @@ class Game(Messaging):
                         render_all += await self.game_over(player, ch_hit=cur_ch)
                         continue
                     elif own_tail_chaser:  # make move (follow tail) + skip old tail rendering
-                        logger.debug('%r is chasing his own tail', player)
+                        logger.debug('=> %r is chasing his own tail', player)
                     elif not tail_chase:  # wait if the other snake's tail moves
-                        if moves.get(player.id, 0) > len(self._players):
-                            raise RuntimeError('infinite loop')
+                        logger.debug('=> %r\'s move postponed', player)
+                        assert first_player_loop, 'infinite loop'
                         players.append(player)
                         continue
 
-                elif cur_ch.char == Snake.CH_HEAD:
-                    other_player = self.get_player_by_color(cur_ch.color)
-                    frontal_crashers.add(player)
-                    frontal_crashers.add(other_player)
-                    logger.debug('%r is frontally crashing into %r', player, other_player)
-                    continue
-
                 elif cur_ch.char != World.CH_VOID and not tail_chase:
+                    if cur_ch.char in Snake.BODY_CHARS:
+                        # now the snake is going to hit another snake -> the situation depends on other snake's move
+                        other_player = self.get_player_by_color(cur_ch.color)
+                        assert other_player
+
+                        if other_player.id not in moves:  # wait for the other snake's move
+                            assert first_player_loop, 'infinite loop'
+                            logger.debug('=> %r\'s move postponed', player)
+                            players.append(player)
+                            continue
+
+                        if other_player.alive and cur_ch.char == Snake.CH_HEAD and not snake_crash:
+                            frontal_crashers.add(player)
+                            frontal_crashers.add(other_player)
+                            logger.debug('=> %r is frontally crashing into %r', player, other_player)
+                            continue
+
                     render_all += await self.game_over(player, ch_hit=cur_ch)
                     continue
 
+                logger.debug('=> %r moves to %s', player, next_pos)
                 render_all += player.snake.render_move(ignore_tail=own_tail_chaser)
                 player.snake.grow += grow
                 moves[player.id] += 1
 
-                # spawn digits proportionally to the number of snakes
-                render_all += self.spawn_digit()
             else:
                 new_players.append(player)
 
@@ -398,10 +426,15 @@ class Game(Messaging):
         for player in frontal_crashers:
             render_all += await self.game_over(player, frontal_crash=True)
 
-        # render current snake moves -> update world before creating new players
+        # render current snake moves -> update world before creating new digits and players
         messages += self._apply_render(render_all.values())
         render_all.clear()
 
+        # spawn digits proportionally to the number of snakes alive
+        for _ in range(self.players_alive_count):
+            render_all += self.spawn_digit()
+
+        # new snakes are rendered last
         for new_player in new_players:
             try:
                 # newborn snake
@@ -411,10 +444,11 @@ class Game(Messaging):
                 await self._send_msg(new_player, self.MSG_ERROR, str(exc))
                 render_all += await self.game_over(new_player)
             else:
+                logger.info('%r was born', new_player)
                 # and it's birthday present
-                render_all += self.spawn_digit(right_now=True)
+                render_all += self.spawn_digit(right_now=True)  # FIXME: can be spawned over a new player
 
-        # render new snakes -> update world before creating stones
+        # render new digits and snakes -> update world before creating stones
         messages += self._apply_render(render_all.values())
 
         # render stone

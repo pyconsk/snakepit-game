@@ -49,8 +49,6 @@ class WallGrinderRobotSnake(RobotSnake):  # noqa: R701
         if initial:
             # noinspection PyAttributeOutsideInit
             self.current_direction = None
-            # noinspection PyAttributeOutsideInit
-            self.changed_direction = False
 
             if head_position[0] > tail_position[0]:
                 self.current_direction = self.RIGHT
@@ -86,23 +84,20 @@ class WallGrinderRobotSnake(RobotSnake):  # noqa: R701
                 elif next_x + 1 >= world.SIZE_X:
                     next_direction.add(self.LEFT)
                 else:
-                    next_direction.update([self.LEFT, self. RIGHT])
+                    next_direction.update([self.LEFT, self.RIGHT])
             elif next_y >= world.SIZE_Y:
                 if next_x - 1 <= 0:
                     next_direction.add(self.RIGHT)
                 elif next_x + 1 >= world.SIZE_X:
                     next_direction.add(self.LEFT)
                 else:
-                    next_direction.update([self.LEFT, self. RIGHT])
+                    next_direction.update([self.LEFT, self.RIGHT])
 
             if next_direction:
                 # noinspection PyAttributeOutsideInit
                 self.current_direction = next_direction.pop()
-                self.changed_direction = True
                 return self.current_direction
 
-            # noinspection PyAttributeOutsideInit
-            self.changed_direction = False
             return None
 
 
