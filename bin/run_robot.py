@@ -7,10 +7,8 @@ import contextlib
 from importlib import import_module
 
 try:
-    from snakepit.world import World
     from snakepit.robot_player import RobotPlayer, DEFAULT_SERVER_URL
     from snakepit.robot_snake import RobotSnake
-    from snakepit.snake import Snake as ServerSnake
 except ImportError:
     print('snakepit Python package not found', file=sys.stderr)
     sys.exit(64)
@@ -53,12 +51,12 @@ class RobotCode(argparse.FileType):
         if not code.co_names:
             raise argparse.ArgumentTypeError('The supplied code is empty')
 
-        local_ns = {}
+        robot_ns = {}
 
         with contextlib.redirect_stdout(open(os.devnull, 'w')):
-            exec(code, {}, local_ns)
+            exec(code, robot_ns)
 
-        for key, val in local_ns.items():
+        for key, val in robot_ns.items():
             if not key.startswith('_'):
                 if is_robot_class(val):
                     class_ = val
@@ -66,10 +64,15 @@ class RobotCode(argparse.FileType):
         else:
             raise argparse.ArgumentTypeError('The code does not contain a RobotSnake-based class')
 
+        globals().update(robot_ns)
+
         return class_
 
 
 def validate_robot_class(robot_snake_class):
+    from snakepit.world import World
+    from snakepit.snake import Snake as ServerSnake
+
     world = World()  # Create test world
     robot_snake = robot_snake_class({}, world, 1)  # Create test player
     server_snake = ServerSnake({}, world, 1)  # Create dummy server snake
