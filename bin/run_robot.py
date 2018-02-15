@@ -135,6 +135,12 @@ if args.validate:
         validate_robot_class(robot_class)
     sys.exit(0)
 
+try:
+    # Emojis on command line
+    robot_name = robot_name.encode('utf8', 'surrogateescape').decode('utf8', 'surrogateescape')
+except ValueError:
+    pass
+
 print('========  Creating new robot player "{!s}" using snake {!r} ======== '.format(robot_name, robot_class),
       file=sys.stderr)
 sys.stderr.flush()

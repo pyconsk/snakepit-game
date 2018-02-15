@@ -254,13 +254,13 @@ class Game(Messaging):
         await self._send_msg_all_multi(messages)
         self._return_player_color(player.color)
         self._calc_top_scores(player)
+        self._store_top_scores()
         await self._send_msg_all(self.MSG_TOP_SCORES, self.top_scores)
 
         render = player.snake.render_game_over()
 
         if not self.players_alive_count:
             render += self._render_text(self.GAME_OVER_TEXT, self._pick_random_color())
-            self._store_top_scores()
 
         return render
 
