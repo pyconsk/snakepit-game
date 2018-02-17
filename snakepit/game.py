@@ -313,6 +313,11 @@ class Game(Messaging):
                 continue
 
             logger.debug('=> Rendering player %r', player)
+            # remember that a player was processed in this frame
+            first_player_loop = player.id not in moves
+
+            if first_player_loop:
+                moves[player.id] = 0
 
             # check if snake already exists
             if player.snake and len(player.snake.body):
@@ -331,10 +336,6 @@ class Game(Messaging):
                 tail_chase = False  # targeting a new void char
                 tail_crash = False  # hitting a tail for sure
                 own_tail_chaser = False
-                first_player_loop = player.id not in moves
-
-                if first_player_loop:
-                    moves[player.id] = 0
 
                 # special cases
                 if next_ch:  # check char already rendered in this frame
@@ -394,7 +395,7 @@ class Game(Messaging):
                         continue
 
                 elif cur_ch.char != World.CH_VOID and not tail_chase:
-                    if cur_ch.char in Snake.BODY_CHARS:
+                    if cur_ch.char in Snake.BODY_CHARS and cur_ch.color != player.color:
                         # now the snake is going to hit another snake -> the situation depends on other snake's move
                         other_player = self.get_player_by_color(cur_ch.color)
                         assert other_player
