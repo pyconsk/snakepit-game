@@ -91,7 +91,8 @@ class RobotPlayer(Messaging):
                     stop = True
 
             elif cmd == self.MSG_P_SCORE:
-                self.players[args[1]] = args[2]
+                if args[1] in self.players:
+                    self.players[args[1]][3] = args[2]
             elif cmd == self.MSG_TOP_SCORES:
                 self.top_scores[:] = args[1]
             else:
