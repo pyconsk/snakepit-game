@@ -49,6 +49,7 @@ GAME_SPEED_INCREASE_RATE = 0.001  # apply this factor to current game speed duri
 GAME_SPEED_MAX = None  # fps limit when GAME_SPEED_INCREASE is active
 GAME_FRAMES_MAX = None  # maximum number of frames; the game ends at this point
 
+GAME_START_WAIT_FOR_PLAYERS = None  # number of connected players before the first frame can be rendered
 GAME_SHUTDOWN_ON_FRAMES_MAX = False  # automatically shutdown the server process when GAME_FRAMES_MAX is reached
 
 MAX_PLAYERS = 6

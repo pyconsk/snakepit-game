@@ -113,8 +113,18 @@ async def game_loop(game):
     game_speed_increase = settings.GAME_SPEED_INCREASE
     game_speed_increase_rate = settings.GAME_SPEED_INCREASE_RATE
     game_frames_max = settings.GAME_FRAMES_MAX
+    game_sync_players = settings.GAME_START_WAIT_FOR_PLAYERS
 
     try:
+        if game_sync_players and game.frame == 0:
+            logger.info('Waiting for all players to be connected before rendering first frame')
+
+            while game.players_alive_count < game_sync_players:
+                logger.debug('%d players are connected; %d are required', game.players_alive_count, game_sync_players)
+                await asyncio.sleep(0.5)
+
+            logger.info('All required (%d) players are here - 3, 2, 1, fight!', game.players_alive_count)
+
         while True:
             await game.next_frame()
 
