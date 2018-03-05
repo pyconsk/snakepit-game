@@ -14,6 +14,8 @@ export PYTHONPATH=$(pwd -P)
 bin/run.py
 ```
 
+**NOTE**: The game is by default available under the URL: `http://0.0.0.0:8111/index.html` (requesting `/index.html` is necessary).
+
 
 ## PyCon SK Programming Contest
 
