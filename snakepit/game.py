@@ -333,6 +333,7 @@ class Game(Messaging):
                 next_ch = render_all.get(next_pos, None)
                 grow = 0
                 snake_crash = False  # hitting other living snake
+                dead_crash = False  # hitting other dead snake
                 tail_chase = False  # targeting a new void char
                 tail_crash = False  # hitting a tail for sure
                 own_tail_chaser = False
@@ -340,6 +341,7 @@ class Game(Messaging):
                 # special cases
                 if next_ch:  # check char already rendered in this frame
                     if next_ch.char in Snake.DEAD_BODY_CHARS:
+                        dead_crash = True
                         logger.debug('=> %r is going to hit a dying snake', player)
                     elif next_ch.char == Snake.CH_HEAD and (cur_ch.char == World.CH_VOID or cur_ch.char.isdigit()):
                         other_player = self.get_player_by_color(next_ch.color)
@@ -371,7 +373,7 @@ class Game(Messaging):
                     logger.debug('=> %r ate the number "%s"', player, grow)
                     messages.append([self.MSG_P_SCORE, player.id, player.score])
 
-                elif cur_ch.char == Snake.CH_TAIL and not tail_crash:  # special case: hitting someone's tail
+                elif cur_ch.char == Snake.CH_TAIL and not tail_crash and not dead_crash:  # hitting someone's tail
                     if cur_ch.color == player.color:
                         other_player = player
                         own_tail_chaser = True
