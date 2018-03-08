@@ -26,7 +26,7 @@ Refactored code and added support for robot snakes:
 
 ## Original Snakepit
 
-The game and tutorial was originally written by Kyrylo Subbotin.
+The game and tutorial was originally written by Kyrylo Subbotin @ [7WebPages](https://7webpages.com/).
 
 Original game source code: https://github.com/7WebPages/snakepit-game
 
