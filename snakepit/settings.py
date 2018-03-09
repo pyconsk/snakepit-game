@@ -28,6 +28,7 @@ SNAKEPIT_SETTINGS = (
     ('GAME_SPEED_INCREASE_RATE', float),
     ('GAME_SPEED_MAX', float),
     ('GAME_FRAMES_MAX', int),
+    ('GAME_START_WAIT_FOR_PLAYERS', int),
     ('GAME_SHUTDOWN_ON_FRAMES_MAX', bool),
     ('MAX_PLAYERS', int),
     ('FIELD_SIZE_X', int),
