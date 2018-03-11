@@ -17,11 +17,17 @@ bin/run.py
 **NOTE**: The game is by default available under the URL: `http://0.0.0.0:8111/index.html` (requesting `/index.html` is necessary).
 
 
-## PyCon SK Programming Contest
+## PyCon SK 2018 Programming Contest
 
 Refactored code and added support for robot snakes:
 
     bin/run_robot.py --help
+
+
+### Winning Robot Snakes
+
+- 1st place: https://gist.github.com/marekmichalik
+- 2nd place: https://github.com/martin-sucha/pyconsk-2018-snakepit-bot
 
 
 ## Original Snakepit
