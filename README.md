@@ -23,6 +23,7 @@ Refactored code and added support for robot snakes:
 
     bin/run_robot.py --help
 
+The robot snake documentation is available here: https://github.com/pyconsk/snakepit-game/blob/master/doc/snake.md
 
 ### Winning Robot Snakes
 
