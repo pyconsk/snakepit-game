@@ -27,7 +27,7 @@ The robot snake documentation is available here: https://github.com/pyconsk/snak
 
 ### Winning Robot Snakes
 
-- 1st place: https://gist.github.com/marekmichalik
+- 1st place: https://gist.github.com/marekmichalik/6d90cace409940e85fd93aeb3ecc3d99
 - 2nd place: https://github.com/martin-sucha/pyconsk-2018-snakepit-bot
 - 3rd place: https://github.com/Artimi/snakepit-game/blob/pyconsk2018/robots/number.py + http://www.petrsebek.cz/2018/03/snakepit-contest-at-pyconsk-2018.html
 
