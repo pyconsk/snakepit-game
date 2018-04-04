@@ -16,7 +16,10 @@ DEFAULT_SERVER_URL = 'http://localhost:%d/connect' % settings.SERVER_PORT
 
 
 class RobotPlayer(Messaging):
-    def __init__(self, name, player_id=None, snake_class=RobotSnake, server_url=DEFAULT_SERVER_URL):
+    DEFAULT_SNAKE_CLASS = RobotSnake
+    ping_pong_enabled = False
+
+    def __init__(self, name, player_id=None, snake_class=None, server_url=DEFAULT_SERVER_URL):
         self._first_render_sent = False
         self._last_ping = None
         self._ws = None
@@ -31,13 +34,17 @@ class RobotPlayer(Messaging):
         self.world = World()
         self.players = {}
         self.top_scores = []
-        self.snake = snake_class({}, self.world, None)
         self.keymap = {
-            RobotSnake.LEFT: 37,
-            RobotSnake.UP: 38,
-            RobotSnake.RIGHT: 39,
-            RobotSnake.DOWN: 40,
+            RobotSnake.LEFT: Messaging.CMD_LEFT,
+            RobotSnake.UP: Messaging.CMD_UP,
+            RobotSnake.RIGHT: Messaging.CMD_RIGHT,
+            RobotSnake.DOWN: Messaging.CMD_DOWN,
         }
+
+        if not snake_class:
+            snake_class = self.DEFAULT_SNAKE_CLASS
+
+        self.snake = snake_class({}, self.world, None)
 
     def __repr__(self):
         return '<%s [id=%s] [name=%s] [color=%s]>' % (self.__class__.__name__, str(self.id)[:8], self.name,
@@ -89,10 +96,11 @@ class RobotPlayer(Messaging):
 
                 if player_id == self.id:
                     stop = True
-
             elif cmd == self.MSG_P_SCORE:
-                if args[1] in self.players:
-                    self.players[args[1]][3] = args[2]
+                player_id = args[1]
+
+                if player_id in self.players:
+                    self.players[player_id][3] = args[2]
             elif cmd == self.MSG_TOP_SCORES:
                 self.top_scores[:] = args[1]
             else:
@@ -170,7 +178,11 @@ class RobotPlayer(Messaging):
         self.running = True
         self.loop = asyncio.get_event_loop()
         self.loop.add_signal_handler(signal.SIGTERM, self.stop)
-        asyncio.ensure_future(self.ping_pong(), loop=self.loop)
+
+        if self.ping_pong_enabled:
+            self.loop.create_task(self.ping_pong())
+
+        self.on_loop_start()
 
         try:
             self.loop.run_until_complete(self.ws_session())
@@ -191,6 +203,7 @@ class RobotPlayer(Messaging):
             for task in asyncio.Task.all_tasks():
                 task.cancel()
 
+            self.on_loop_stop()
             self.loop.stop()
 
     def tick(self, start=False, stop=False):
@@ -204,3 +217,9 @@ class RobotPlayer(Messaging):
                 response_msg = self.keymap.get(direction, None)
 
         return response_msg
+
+    def on_loop_start(self):
+        pass
+
+    def on_loop_stop(self):
+        pass

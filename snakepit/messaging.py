@@ -28,6 +28,11 @@ class Messaging:
     MSG_PONG = 'pong'
     MSG_SYNC = 'sync'
 
+    CMD_LEFT = 37
+    CMD_UP = 38
+    CMD_RIGHT = 39
+    CMD_DOWN = 40
+
     @staticmethod
     async def _send_one(ws, message):
         msg = json.dumps(message)

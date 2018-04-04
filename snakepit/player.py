@@ -1,5 +1,6 @@
 from logging import getLogger
 
+from .messaging import Messaging
 from .snake import Snake
 
 logger = getLogger(__name__)
@@ -14,10 +15,10 @@ class Player:
         self.wss = []
         self.score = 0
         self.keymap = {
-            37: Snake.LEFT,
-            38: Snake.UP,
-            39: Snake.RIGHT,
-            40: Snake.DOWN,
+            Messaging.CMD_LEFT: Snake.LEFT,
+            Messaging.CMD_UP: Snake.UP,
+            Messaging.CMD_RIGHT: Snake.RIGHT,
+            Messaging.CMD_DOWN: Snake.DOWN,
         }
         self.add_connection(ws)
 
